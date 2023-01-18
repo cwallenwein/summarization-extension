@@ -15,5 +15,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // listen to requests (from popup)
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log(message)
+    if (message.type === "summarization_request"){
+        let tabId = message.tabId
+        console.log("Summarization request from tab", tabId)
+    }
 })
