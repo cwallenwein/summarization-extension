@@ -2,9 +2,9 @@
 
 // listener for "summarize"-button
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("button-summarize").addEventListener("click", requestSummary());
+  document.getElementById("button-summarize").addEventListener("click", requestSummary);
 })
 
-function requestSummary(){
-  console.log("Summarization button clicked")
+async function requestSummary(){
+  await chrome.runtime.sendMessage({type:"summarization_request"})
 }

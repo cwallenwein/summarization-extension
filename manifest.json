@@ -4,7 +4,7 @@
   "short_name": "summarization",
   "description": "",
   "version": "1",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "background": {
     "service_worker": "worker.js"
   },
