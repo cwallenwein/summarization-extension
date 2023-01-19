@@ -6,6 +6,7 @@ async function buildPopup() {
   addSummarizeButtonEventListener()
   await buildSummaryHistory()
   await buildApiKeyForm()
+  await displayCurrentApiKey()
 }
 
 // Handles updated history in chrome storage
@@ -67,8 +68,18 @@ async function buildApiKeyForm() {
       event.preventDefault()
       let apiKey = document.getElementById("api-key-input").value
       await setApiKey(apiKey)
+      await displayCurrentApiKey()
     })
   } catch (error) {
+    console.error(error)
+  }
+}
+
+async function displayCurrentApiKey() {
+  try {
+    let apiKey = await getApiKey()
+    document.getElementById("current-api-key").innerText = "Current API Key: " + apiKey
+  } catch {
     console.error(error)
   }
 }
