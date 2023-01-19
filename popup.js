@@ -1,54 +1,113 @@
-//popup.js
+document.addEventListener("DOMContentLoaded", buildPopup)
+chrome.storage.onChanged.addListener(handleStorageUpdate)
 
-document.addEventListener("DOMContentLoaded", async () => {
+// Builds all elements of the popup
+async function buildPopup() {
   addSummarizeButtonEventListener()
   await buildSummaryHistory()
   await buildApiKeyForm()
-  let apiKey = await getApiKey()
-  console.log(apiKey)
-})
-
-function addSummarizeButtonEventListener() {
-  document.getElementById("button-summarize").addEventListener("click", requestSummary);
 }
 
-async function requestSummary() {
-  let activeTab = await getActiveTab();
-  let tabId = activeTab.id
-  let url = activeTab.url
-  await chrome.runtime.sendMessage({ type: "summarization_request", url: url, tabId: tabId })
-}
-
-async function getActiveTab() {
-  let queryOptions = { active: true, lastFocusedWindow: true };
-  // `tab` will either be a `tabs.Tab` instance or `undefined`.
-  let [tab] = await chrome.tabs.query(queryOptions);
-  return tab;
-}
-
-async function buildApiKeyForm() {
-  let apiKeyForm = document.getElementById("api-key-form")
-  console.log(apiKeyForm)
-  apiKeyForm.addEventListener("submit", async (event) => {
-    console.log("submitting api key")
-    event.preventDefault()
-    let apiKey = document.getElementById("api-key-input").value
-    await chrome.storage.local.set({ apiKey: apiKey })
-  })
-}
-
-chrome.storage.onChanged.addListener(async (changes, namespace) => {
-  console.log("History was updated!")
+// Handles updated history in chrome storage
+async function handleStorageUpdate(changes, _) {
   for (key in changes) {
     if (key === "history") {
       await buildSummaryHistory()
     }
   }
-})
+}
 
+// Adds click event listener to the summarize button
+function addSummarizeButtonEventListener() {
+  try {
+    document.getElementById("button-summarize").addEventListener("click", requestSummary);
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+// Sends a message to the worker script to summarize the active tab
+async function requestSummary() {
+  let activeTab = await getActiveTab();
+  if (activeTab) {
+    let tabId = activeTab.id
+    let url = activeTab.url
+    await sendSummarizationRequest(url, tabId)
+  } else {
+    console.error("No active tab")
+  }
+}
+
+// Sends a message to the worker script to summarize the highlighted text in the active tab
+async function sendSummarizationRequest(url, tabId) {
+  try {
+    await chrome.runtime.sendMessage({ type: "summarization_request", url: url, tabId: tabId })
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// Retrieves the active tab
+async function getActiveTab() {
+  try {
+    let queryOptions = { active: true, lastFocusedWindow: true };
+    // `tab` will either be a `tabs.Tab` instance or `undefined`.
+    let [tab] = await chrome.tabs.query(queryOptions);
+    return tab;
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// Adds submit event listener to the API key form
+async function buildApiKeyForm() {
+  try {
+    let apiKeyForm = document.getElementById("api-key-form")
+    apiKeyForm.addEventListener("submit", async (event) => {
+      event.preventDefault()
+      let apiKey = document.getElementById("api-key-input").value
+      await setApiKey(apiKey)
+    })
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// Retrieves the summary history from chrome storage
+async function getHistory() {
+  try {
+    let result = await chrome.storage.local.get("history")
+    return result.history
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// Retrieves the API key from chrome storage
+async function getApiKey() {
+  try {
+    let result = await chrome.storage.local.get("apiKey")
+    return result.apiKey
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+async function setApiKey(apiKey) {
+  try {
+    await chrome.storage.local.set({ apiKey: apiKey })
+  } catch (error) {
+    console.error(error)
+  }
+}
+
+// Builds the summary history table
 async function buildSummaryHistory() {
-  let history = await getHistory()
-  console.log("new history", history)
+  try {
+    let history = await getHistory()
+  } catch (error) {
+    console.error(error)
+  }
 
   let headerRow = buildHeaderRow()
 
@@ -59,23 +118,16 @@ async function buildSummaryHistory() {
     let row = buildRowFromSummary(history[i])
     tableBody.appendChild(row)
   }
+  try {
+    let table = document.getElementById("summary-table")
+  } catch (error) {
+    console.error(error)
+  }
 
-  console.log(tableBody)
-
-  let table = document.getElementById("summary-table")
   table.replaceChildren(tableBody)
 }
 
-async function getHistory() {
-  let result = await chrome.storage.local.get("history")
-  return result.history
-}
-
-async function getApiKey() {
-  let result = await chrome.storage.local.get("apiKey")
-  return result.apiKey
-}
-
+// Builds a row from a summary object
 function buildRowFromSummary(summary) {
   let urlCell = builtTableData(summary.url)
   let textCell = builtTableData(summary.text)
@@ -88,6 +140,7 @@ function buildRowFromSummary(summary) {
   return row
 }
 
+// Builds the header row for the summary history table
 function buildHeaderRow() {
   let url = buildTableHeader("URL")
   let text = buildTableHeader("Text")
@@ -100,12 +153,14 @@ function buildHeaderRow() {
   return row
 }
 
+// Builds a table header element
 function buildTableHeader(content) {
   let header = document.createElement("th")
   header.innerHTML = content
   return header
 }
 
+// Builds a table data element
 function builtTableData(content) {
   let data = document.createElement("td")
   data.innerHTML = content
