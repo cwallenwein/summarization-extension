@@ -43,7 +43,6 @@ async function getSelectedText(tabId) {
     } catch (error) {
         console.error(error)
     }
-
 }
 
 
@@ -56,28 +55,29 @@ async function saveSummary(url, text, summary) {
         summary: summary
     })
     await setSummaryHistory(history)
-
 }
 
 // Summarizes the text using the Hugging Face API
 async function summarizeTextWithHuggingFace(text) {
     try {
         let result = await queryHuggingFace({ "inputs": text })
+        console.log("result", result)
         if (result && result.length >= 1) {
             let summary = result[0]["summary_text"]
             return JSON.stringify(summary);
+        } else {
+            throw new Error("No summary returned")
         }
-        throw new Error("No summary returned")
     } catch (error) {
         console.error(error)
     }
-
 }
 
 // Queries the Hugging Face API
 async function queryHuggingFace(request) {
     try {
         let apiKey = await getApiKey()
+        console.log("apiKey", apiKey)
         const response = await fetch(
             "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
             {
@@ -101,7 +101,6 @@ async function getApiKey() {
     } catch (error) {
         console.error(error)
     }
-
 }
 
 // Retrieves the summary history from chrome storage

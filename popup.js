@@ -105,26 +105,22 @@ async function setApiKey(apiKey) {
 async function buildSummaryHistory() {
   try {
     let history = await getHistory()
-  } catch (error) {
-    console.error(error)
-  }
+    let headerRow = buildHeaderRow()
 
-  let headerRow = buildHeaderRow()
+    let tableBody = document.createElement("tbody")
+    tableBody.appendChild(headerRow)
 
-  let tableBody = document.createElement("tbody")
-  tableBody.appendChild(headerRow)
+    for (let i = history.length - 1; i >= 0; i--) {
+      let row = buildRowFromSummary(history[i])
+      tableBody.appendChild(row)
+    }
 
-  for (let i = history.length - 1; i >= 0; i--) {
-    let row = buildRowFromSummary(history[i])
-    tableBody.appendChild(row)
-  }
-  try {
     let table = document.getElementById("summary-table")
+    table.replaceChildren(tableBody)
+
   } catch (error) {
     console.error(error)
   }
-
-  table.replaceChildren(tableBody)
 }
 
 // Builds a row from a summary object
