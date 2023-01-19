@@ -10,6 +10,8 @@ Functionality:
     4. worker sends a request to the summarization api
     5. result is stored in chrome.storage
     6. popup listens to chrome.storage events and updates/displays feed accordingly
+- User has to specify his/her API-key when the extension is installed
+- Message if no text was specified
 
 
 Popup-Design:
