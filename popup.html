@@ -2,15 +2,12 @@
 <html>
 
 <head>
-    <title>My Extension</title>
+    <title>Summary Extension</title>
     <script src="popup.js"></script>
 </head>
 
 <body>
-    <form id="api-key-form">
-        <input type="text" id="api-key-input" placeholder="Enter your API key">
-        <input type="submit" value="Submit">
-    </form>
+    <h1 style="font-size: 16pt">Summary</h1>
     <button id="button-summarize"> Summarize selected text </button>
     <table id="summary-table">
         <tr>
@@ -19,6 +16,11 @@
             <th>Summary</th>
         </tr>
     </table>
+    <hr>
+    <form id="api-key-form">
+        <input type="text" id="api-key-input" placeholder="Enter your API key">
+        <input type="submit" value="Submit">
+    </form>
 </body>
 
 </html>
