@@ -1,6 +1,7 @@
 chrome.runtime.onInstalled.addListener(initializeExtension)
 chrome.runtime.onMessage.addListener(handleMessage)
 
+// Initializes the extension by setting the initial values for history and apiKey in chrome storage
 async function initializeExtension() {
     try {
         await chrome.storage.local.set({
@@ -12,13 +13,14 @@ async function initializeExtension() {
     }
 }
 
+// Handles incoming messages and calls the appropriate function based on message type
 async function handleMessage(message, sender, sendResponse) {
     if (message.type === "summarization_request") {
         let tabId = message.tabId
         let url = message.url
         let text = await getSelectedText(tabId)
         if (text) {
-            let summary = await summarizeText(text)
+            let summary = await summarizeTextWithHuggingFace(text)
             await saveSummary(url, text, summary)
         } else {
             console.error("No text selected")
@@ -26,6 +28,7 @@ async function handleMessage(message, sender, sendResponse) {
     }
 }
 
+// Retrieves the selected text on the current tab
 async function getSelectedText(tabId) {
     try {
         let injectionResults = await chrome.scripting.executeScript({
@@ -43,10 +46,8 @@ async function getSelectedText(tabId) {
 
 }
 
-async function summarizeText(text) {
-    return await summarizeTextWithHuggingFace(text)
-}
 
+// Saves the summary to chrome storage
 async function saveSummary(url, text, summary) {
     let history = await getSummaryHistory()
     history.push({
@@ -58,6 +59,7 @@ async function saveSummary(url, text, summary) {
 
 }
 
+// Summarizes the text using the Hugging Face API
 async function summarizeTextWithHuggingFace(text) {
     try {
         let result = await queryHuggingFace({ "inputs": text })
@@ -72,6 +74,7 @@ async function summarizeTextWithHuggingFace(text) {
 
 }
 
+// Queries the Hugging Face API
 async function queryHuggingFace(request) {
     try {
         let apiKey = await getApiKey()
@@ -90,6 +93,7 @@ async function queryHuggingFace(request) {
     }
 }
 
+// Retrieves the API key from chrome storage
 async function getApiKey() {
     try {
         let result = await chrome.storage.local.get("apiKey")
@@ -100,6 +104,7 @@ async function getApiKey() {
 
 }
 
+// Retrieves the summary history from chrome storage
 async function getSummaryHistory() {
     try {
         let result = await chrome.storage.local.get("history")
@@ -109,6 +114,7 @@ async function getSummaryHistory() {
     }
 }
 
+// Sets the summary history in chrome storage
 async function setSummaryHistory(newHistory) {
     try {
         await chrome.storage.local.set({
