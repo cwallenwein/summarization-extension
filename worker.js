@@ -1,43 +1,25 @@
-// when popup is created initialize chrome.storage summarization history
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.set({
+chrome.runtime.onInstalled.addListener(initializeExtension)
+chrome.runtime.onMessage.addListener(handleMessage)
+
+async function initializeExtension() {
+    await chrome.storage.local.set({
         history: [],
         apiKey: undefined
     })
-})
+}
 
-// listen to requests (from popup)
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+async function handleMessage(message, sender, sendResponse) {
     if (message.type === "summarization_request") {
         let tabId = message.tabId
         let url = message.url
         let text = await getSelectedText(tabId)
-        // TODO: check if no text is selected
-        let summary = await summarizeText(text)
-        await saveSummaryToSummaryHistory(url, text, summary)
+        if (text) {
+            let summary = await summarizeText(text)
+            await saveSummary(url, text, summary)
+        } else {
+            console.log("No text selected")
+        }
     }
-})
-
-async function saveSummaryToSummaryHistory(url, text, summary) {
-    let history = await getSummaryHistory()
-    history.push({
-        url: url,
-        text: text,
-        summary: summary
-    })
-    await overwriteSummaryHistory(history)
-
-}
-
-async function overwriteSummaryHistory(newHistory) {
-    await chrome.storage.local.set({
-        history: newHistory
-    })
-}
-
-async function getSummaryHistory() {
-    let result = await chrome.storage.local.get("history")
-    return result.history;
 }
 
 async function getSelectedText(tabId) {
@@ -56,6 +38,17 @@ async function summarizeText(text) {
     return await summarizeTextWithHuggingFace(text)
 }
 
+async function saveSummary(url, text, summary) {
+    let history = await getSummaryHistory()
+    history.push({
+        url: url,
+        text: text,
+        summary: summary
+    })
+    await setSummaryHistory(history)
+
+}
+
 async function summarizeTextWithHuggingFace(text) {
     let result = await queryHuggingFace({ "inputs": text })
     if (result && result.length >= 1) {
@@ -65,15 +58,14 @@ async function summarizeTextWithHuggingFace(text) {
     else return "Error"
 }
 
-async function queryHuggingFace(data) {
+async function queryHuggingFace(request) {
     let apiKey = await getApiKey()
-    console.log("query hugging face with api key", apiKey)
     const response = await fetch(
         "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
         {
             headers: { Authorization: apiKey },
             method: "POST",
-            body: JSON.stringify(data),
+            body: JSON.stringify(request),
         }
     );
     const result = await response.json();
@@ -83,4 +75,15 @@ async function queryHuggingFace(data) {
 async function getApiKey() {
     let result = await chrome.storage.local.get("apiKey")
     return result.apiKey
+}
+
+async function getSummaryHistory() {
+    let result = await chrome.storage.local.get("history")
+    return result.history;
+}
+
+async function setSummaryHistory(newHistory) {
+    await chrome.storage.local.set({
+        history: newHistory
+    })
 }
