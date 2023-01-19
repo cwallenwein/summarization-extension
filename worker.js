@@ -1,17 +1,7 @@
 // when popup is created initialize chrome.storage summarization history
 chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.set({
-        history: [
-            /*{
-                url: "https://google.com",
-                text: "This is a long text",
-                summary: "This is a summary"
-            },{
-                url: "https://youtube.com",
-                text: "This is another long text",
-                summary: "This is another summary"
-            }*/
-        ],
+        history: [],
         apiKey: undefined
     })
 })
