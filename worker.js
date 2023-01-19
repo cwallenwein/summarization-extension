@@ -2,10 +2,14 @@ chrome.runtime.onInstalled.addListener(initializeExtension)
 chrome.runtime.onMessage.addListener(handleMessage)
 
 async function initializeExtension() {
-    await chrome.storage.local.set({
-        history: [],
-        apiKey: undefined
-    })
+    try {
+        await chrome.storage.local.set({
+            history: [],
+            apiKey: undefined
+        })
+    } catch (error) {
+        console.error(error)
+    }
 }
 
 async function handleMessage(message, sender, sendResponse) {
@@ -17,21 +21,26 @@ async function handleMessage(message, sender, sendResponse) {
             let summary = await summarizeText(text)
             await saveSummary(url, text, summary)
         } else {
-            console.log("No text selected")
+            console.error("No text selected")
         }
     }
 }
 
 async function getSelectedText(tabId) {
-    let injectionResults = await chrome.scripting.executeScript({
-        target: { tabId: tabId },
-        func: () => window.getSelection().toString(),
-    })
-    if (injectionResults && injectionResults.length >= 1) {
-        let selection = injectionResults[0].result
-        return selection
+    try {
+        let injectionResults = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: () => window.getSelection().toString(),
+        })
+        if (injectionResults && injectionResults.length >= 1) {
+            let selection = injectionResults[0].result
+            return selection
+        }
+        else return ""
+    } catch (error) {
+        console.error(error)
     }
-    else return ""
+
 }
 
 async function summarizeText(text) {
@@ -50,40 +59,62 @@ async function saveSummary(url, text, summary) {
 }
 
 async function summarizeTextWithHuggingFace(text) {
-    let result = await queryHuggingFace({ "inputs": text })
-    if (result && result.length >= 1) {
-        let summary = result[0]["summary_text"]
-        return JSON.stringify(summary);
+    try {
+        let result = await queryHuggingFace({ "inputs": text })
+        if (result && result.length >= 1) {
+            let summary = result[0]["summary_text"]
+            return JSON.stringify(summary);
+        }
+        throw new Error("No summary returned")
+    } catch (error) {
+        console.error(error)
     }
-    else return "Error"
+
 }
 
 async function queryHuggingFace(request) {
-    let apiKey = await getApiKey()
-    const response = await fetch(
-        "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
-        {
-            headers: { Authorization: apiKey },
-            method: "POST",
-            body: JSON.stringify(request),
-        }
-    );
-    const result = await response.json();
-    return result;
+    try {
+        let apiKey = await getApiKey()
+        const response = await fetch(
+            "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
+            {
+                headers: { Authorization: apiKey },
+                method: "POST",
+                body: JSON.stringify(request),
+            }
+        );
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error(error)
+    }
 }
 
 async function getApiKey() {
-    let result = await chrome.storage.local.get("apiKey")
-    return result.apiKey
+    try {
+        let result = await chrome.storage.local.get("apiKey")
+        return result.apiKey
+    } catch (error) {
+        console.error(error)
+    }
+
 }
 
 async function getSummaryHistory() {
-    let result = await chrome.storage.local.get("history")
-    return result.history;
+    try {
+        let result = await chrome.storage.local.get("history")
+        return result.history;
+    } catch (error) {
+        console.error(error)
+    }
 }
 
 async function setSummaryHistory(newHistory) {
-    await chrome.storage.local.set({
-        history: newHistory
-    })
+    try {
+        await chrome.storage.local.set({
+            history: newHistory
+        })
+    } catch (error) {
+        console.error(error)
+    }
 }
