@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
-import { Avatar, Button, Card, Col, Row, Skeleton, Typography, Tooltip } from 'antd';
+import { Avatar, Button, Card, Col, Form, Row, Input, Skeleton, Typography, Tooltip } from 'antd';
 import Storage, { ISummary } from './services/Storage';
 import 'antd/dist/reset.css';
 import './App.css';
@@ -42,13 +42,13 @@ const App: React.FC = () => {
 const GoToSettingsButton: any = (props: any) => {
   return (
     <Tooltip title="Set HuggingFace API Key">
-      <ApiOutlined onClick={() => props.setActiveTab("settings")} />
+      <SettingOutlined onClick={() => props.setActiveTab("settings")} />
     </Tooltip>)
 }
 
 const GoToHowToUsePageButton: any = (props: any) => {
   return (
-    <Tooltip title="How to use this extension">
+    <Tooltip title="Help">
       <QuestionCircleOutlined onClick={() => props.setActiveTab("howToUse")} />
     </Tooltip>)
 }
@@ -80,11 +80,25 @@ const HowToUse: React.FC = () => {
 const Settings: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>("")
 
-  // useEffect(() => {
-  // getApiKey().then((result) => {
-  // setApiKey(result)
-  // })
-  // })
+  // Update displayed API key when it was changed in local storage
+  useEffect(() => {
+    const updateApiKey = async () => {
+      const result = await Storage.getApiKey()
+      if (result) {
+        setApiKey(result)
+      } else {
+        console.error("No API key found in local storage")
+      }
+    }
+
+    updateApiKey().catch(console.error)
+  })
+
+  // When the user changes the API key, save it to local storage
+  const updateApiKey = async (newApiKey: string) => {
+    await setApiKey(newApiKey)
+    await Storage.setApiKey(newApiKey)
+  }
 
   // <Input placeholder="API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
   // <Button icon={<LeftOutlined />} type="text" />
@@ -92,19 +106,26 @@ const Settings: React.FC = () => {
   return (
     <div>
       <Title level={5}>Settings</Title>
-      <Paragraph>
-        Save and change your API Key here
+      <Paragraph
+        editable={{
+          tooltip: 'Click to edit the API Key',
+          onChange: updateApiKey,
+          triggerType: ["icon", "text"],
+        }}
+      > {apiKey}
       </Paragraph>
+
     </div>
   )
 }
+
 
 
 function SummaryHistory() {
   const [history, setHistory] = useState<string[]>([])
 
   useEffect(() => {
-    getHistory().then((result) => {
+    Storage.getHistory().then((result) => {
       setHistory(result)
     })
   })
@@ -113,8 +134,7 @@ function SummaryHistory() {
     <>
       {
         history.map((item: any, index) => {
-          return <SummaryCard content={item.summary} url={item.url}>
-          </SummaryCard>
+          return <SummaryCard content={item.summary} url={item.url} />
         })
       }
     </>
