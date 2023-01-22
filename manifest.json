@@ -4,11 +4,15 @@
   "short_name": "summarization",
   "description": "",
   "version": "1",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
   "background": {
     "service_worker": "worker.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "build/index.html"
   }
 }
