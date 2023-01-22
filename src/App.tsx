@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Col, Row, Skeleton, Typography, Tooltip } from 'antd';
+import Storage, { ISummary } from './services/Storage';
 import 'antd/dist/reset.css';
 import './App.css';
 
@@ -159,15 +160,6 @@ function SummaryCard(props: any) {
     </Card>
   )
 
-}
-
-async function getHistory() {
-  try {
-    let result = await chrome.storage.local.get("history")
-    return result.history
-  } catch (error) {
-    console.error(error)
-  }
 }
 
 export default App;
