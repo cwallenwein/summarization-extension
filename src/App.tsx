@@ -13,12 +13,10 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main")
 
   const tabs: { [key: string]: any } = {
-    main: <SummaryHistory></SummaryHistory>,
-    settings: <Settings></Settings>,
-    howToUse: <HowToUse></HowToUse>
+    main: <SummaryHistory />,
+    settings: <Settings />,
+    howToUse: <HowToUse />
   }
-
-  const [loading, setLoading] = useState<boolean>(false);
 
   // <Button icon={<ApiOutlined />} onClick={() => setActiveTab("settings")}>Settings</Button>
   // <Button icon={<QuestionCircleOutlined />} onClick={() => setActiveTab("howToUse")}>How to Use</Button>
@@ -27,12 +25,12 @@ const App: React.FC = () => {
     <div className="App">
       <Card
         id="main"
-        title={<ExtensionTitle activeTab={activeTab} setActiveTab={setActiveTab} />}
+        title="Highlighter"
         actions={[
-          <Tooltip title="Set HuggingFace API Key"><ApiOutlined onClick={() => setActiveTab("settings")} /></Tooltip>,
-          <Tooltip title="How to use this extension"><QuestionCircleOutlined onClick={() => setActiveTab("howToUse")} /></Tooltip>]
+          <GoToSettingsButton setActiveTab={setActiveTab} />,
+          <GoToHowToUsePageButton setActiveTab={setActiveTab} />]
         }
-        extra={< Tooltip title="Summarize Highlighted Text" > <Button type="primary" loading={loading} onClick={() => setLoading(true)}>Summarize Text</Button></Tooltip >}
+        extra={<SummarizeButton />}
         style={{ textAlign: "left" }}>
         <div style={{ overflowY: "auto", height: 400, width: 500 }}> {tabs[activeTab]} </div>
       </Card >
@@ -40,26 +38,36 @@ const App: React.FC = () => {
   )
 };
 
-const ExtensionTitle: any = (props: { activeTab: string, setActiveTab: any }) => {
-  const [hidden, setHidden] = useState<boolean>(false)
-  const icon = <LeftOutlined />
-  const style = { marginRight: 10 }
-  const onClick = () => props.setActiveTab("main")
+const GoToSettingsButton: any = (props: any) => {
+  return (
+    <Tooltip title="Set HuggingFace API Key">
+      <ApiOutlined onClick={() => props.setActiveTab("settings")} />
+    </Tooltip>)
+}
 
-  useEffect(() => { if (props.activeTab === "main") { setHidden(true) } else { setHidden(false) } }, [props.activeTab])
+const GoToHowToUsePageButton: any = (props: any) => {
+  return (
+    <Tooltip title="How to use this extension">
+      <QuestionCircleOutlined onClick={() => props.setActiveTab("howToUse")} />
+    </Tooltip>)
+}
+
+const SummarizeButton: FC = () => {
+  const [loading, setLoading] = useState<boolean>(false);
 
   return (
-    <>
-      <Button icon={icon} hidden={hidden} style={style} onClick={onClick} />
-      Highlighter
-    </>
-  )
+    < Tooltip title="Summarize Highlighted Text" >
+      <Button type="primary" loading={loading} onClick={() => setLoading(true)}>
+        Summarize Text
+      </Button>
+    </Tooltip >)
 }
 
 // TODO Add Button to go back to summaries
 const HowToUse: React.FC = () => {
   return (
     <div>
+      <Title level={5}>How to Use</Title>
       <Paragraph>
         Explanation of how to use this extension
       </Paragraph>
@@ -78,9 +86,11 @@ const Settings: React.FC = () => {
   // })
 
   // <Input placeholder="API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+  // <Button icon={<LeftOutlined />} type="text" />
 
   return (
     <div>
+      <Title level={5}>Settings</Title>
       <Paragraph>
         Save and change your API Key here
       </Paragraph>
