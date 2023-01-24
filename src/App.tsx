@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
-import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
-import { Avatar, Button, Card, Col, Form, Row, Input, Skeleton, Typography, Tooltip } from 'antd';
+import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, ArrowLeftOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
+import { Button, Card, Form, Input, Skeleton, Typography, Tooltip } from 'antd';
 import Storage, { ISummary } from './services/Storage';
 import 'antd/dist/reset.css';
 import './App.css';
@@ -14,7 +14,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main")
 
   const tabs: { [key: string]: any } = {
-    main: <SummaryHistory />,
+    main: <Summaries />,
     settings: <Settings />,
     help: <Help />
   }
@@ -23,7 +23,7 @@ const App: React.FC = () => {
     <div className="App">
       <Card
         id="main"
-        title="Highlighter"
+        title={activeTab != "main" ? <><BackButton setActiveTab={setActiveTab} /> Highlighter</> : <>Highlighter</>}
         extra={[
           <GoToSettingsButton setActiveTab={setActiveTab} />,
           <GoToHelpButton setActiveTab={setActiveTab} />
@@ -55,26 +55,34 @@ const SummarizeButton: FC = () => {
 
   return (
     < Tooltip title="Summarize Highlighted Text" >
-      <Button type="primary" loading={loading} onClick={() => setLoading(true)} block style={{ height: 60, fontSize: 16 }}>
+      <Button type="primary" loading={loading} onClick={() => setLoading(true)} block style={{ height: 60, fontSize: 16, borderRadius: 0 }}>
         Summarize
       </Button>
     </Tooltip >)
 }
 
-// TODO Add Button to go back to summaries
-const Help: React.FC = () => {
+const Padding: any = ({ children }: any) => {
   return (
-    <div>
-      <Title level={5}>How to Use</Title>
-      <Paragraph>
-        Explanation of how to use this extension
-      </Paragraph>
-    </div>
+    <div style={{ padding: 16 }}> {children}</div>
   )
 }
 
 // TODO Add Button to go back to summaries
-const Settings: React.FC = () => {
+const Help: React.FC = (props: any) => {
+  return (
+    <Padding>
+      <Paragraph strong>
+        Help
+      </Paragraph>
+      <Paragraph>
+        Explanation of how to use this extension
+      </Paragraph>
+    </Padding>
+  )
+}
+
+// TODO Add Button to go back to summaries
+const Settings: React.FC = (props: any) => {
   const [apiKey, setApiKey] = useState<string>("")
 
   // Update displayed API key when it was changed in local storage
@@ -116,21 +124,27 @@ const Settings: React.FC = () => {
   )
 }
 
+const BackButton: any = (props: any) => {
+  return (
+    <Tooltip title="Back">
+      <Button shape="circle" icon={<ArrowLeftOutlined />} size="small" onClick={() => props.setActiveTab("main")} style={{ marginRight: 8 }} />
+    </Tooltip>
+  )
+}
 
-
-function SummaryHistory() {
-  const [history, setHistory] = useState<string[]>([])
+function Summaries() {
+  const [allSummaries, setAllSummaries] = useState<string[]>([])
 
   useEffect(() => {
     Storage.getHistory().then((result) => {
-      setHistory(result)
+      setAllSummaries(result)
     })
   })
 
   return (
     <>
       {
-        history.map((item: any, index) => {
+        allSummaries.map((item: any, index) => {
           return <SummaryCard content={item.summary} url={item.url} />
         })
       }
