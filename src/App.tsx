@@ -31,7 +31,7 @@ const App: React.FC = () => {
         style={{ textAlign: "left" }}>
         <div style={{ overflowY: "auto", height: 400, width: 500 }}> {tabs[activeTab]} </div>
       </Card >
-      <Button type="primary" block style={{ height: 60 }}>Summarize</Button>
+      <SummarizeButton />
     </div >
   )
 };
@@ -55,8 +55,8 @@ const SummarizeButton: FC = () => {
 
   return (
     < Tooltip title="Summarize Highlighted Text" >
-      <Button type="primary" loading={loading} onClick={() => setLoading(true)}>
-        Summarize Text
+      <Button type="primary" loading={loading} onClick={() => setLoading(true)} block style={{ height: 60, fontSize: 16 }}>
+        Summarize
       </Button>
     </Tooltip >)
 }
