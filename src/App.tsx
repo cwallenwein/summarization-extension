@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
-import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
+import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Col, Form, Row, Input, Skeleton, Typography, Tooltip } from 'antd';
 import Storage, { ISummary } from './services/Storage';
 import 'antd/dist/reset.css';
@@ -16,40 +16,37 @@ const App: React.FC = () => {
   const tabs: { [key: string]: any } = {
     main: <SummaryHistory />,
     settings: <Settings />,
-    howToUse: <HowToUse />
+    help: <Help />
   }
-
-  // <Button icon={<ApiOutlined />} onClick={() => setActiveTab("settings")}>Settings</Button>
-  // <Button icon={<QuestionCircleOutlined />} onClick={() => setActiveTab("howToUse")}>How to Use</Button>
 
   return (
     <div className="App">
       <Card
         id="main"
         title="Highlighter"
-        actions={[
+        extra={[
           <GoToSettingsButton setActiveTab={setActiveTab} />,
-          <GoToHowToUsePageButton setActiveTab={setActiveTab} />]
-        }
-        extra={<SummarizeButton />}
+          <GoToHelpButton setActiveTab={setActiveTab} />
+        ]}
         style={{ textAlign: "left" }}>
         <div style={{ overflowY: "auto", height: 400, width: 500 }}> {tabs[activeTab]} </div>
       </Card >
+      <Button type="primary" block style={{ height: 60 }}>Summarize</Button>
     </div >
   )
 };
 
 const GoToSettingsButton: any = (props: any) => {
   return (
-    <Tooltip title="Set HuggingFace API Key">
-      <SettingOutlined onClick={() => props.setActiveTab("settings")} />
+    <Tooltip title="Settings">
+      <Button shape="circle" icon={<SettingOutlined />} size="small" onClick={() => props.setActiveTab("settings")} />
     </Tooltip>)
 }
 
-const GoToHowToUsePageButton: any = (props: any) => {
+const GoToHelpButton: any = (props: any) => {
   return (
     <Tooltip title="Help">
-      <QuestionCircleOutlined onClick={() => props.setActiveTab("howToUse")} />
+      <Button shape="circle" icon={<QuestionOutlined />} size="small" onClick={() => props.setActiveTab("help")} style={{ marginLeft: "16px" }} />
     </Tooltip>)
 }
 
@@ -65,7 +62,7 @@ const SummarizeButton: FC = () => {
 }
 
 // TODO Add Button to go back to summaries
-const HowToUse: React.FC = () => {
+const Help: React.FC = () => {
   return (
     <div>
       <Title level={5}>How to Use</Title>
