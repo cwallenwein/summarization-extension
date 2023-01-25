@@ -27,7 +27,7 @@ async function initializeExtension() {
                     summary: "Smith, who was managing 40 assistants to financial advisers at a bank in Atlanta, said most of her team performed well during the past year and were great about staying in touch with her. But the few who were not exhausted her."
                 }
             ],
-            apiKey: undefined
+            apiKey: "Bearer hf_"
         })
     } catch (error) {
         console.error(error)
