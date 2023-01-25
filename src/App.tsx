@@ -100,27 +100,31 @@ const Settings: React.FC = (props: any) => {
   })
 
   // When the user changes the API key, save it to local storage
-  const updateApiKey = async (newApiKey: string) => {
+  const onFinish = async (values: any) => {
+    const newApiKey = values.apiKey
     await setApiKey(newApiKey)
     await Storage.setApiKey(newApiKey)
+    console.log("New API Key: ", newApiKey)
   }
 
-  // <Input placeholder="API Key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-  // <Button icon={<LeftOutlined />} type="text" />
-
   return (
-    <div>
-      <Title level={5}>Settings</Title>
-      <Paragraph
-        editable={{
-          tooltip: 'Click to edit the API Key',
-          onChange: updateApiKey,
-          triggerType: ["icon", "text"],
-        }}
-      > {apiKey}
+    <Padding>
+      <Paragraph strong>
+        Settings
       </Paragraph>
+      <Form onFinish={onFinish}>
+        <Form.Item name="apiKey">
+          <Input prefix={<ApiOutlined />} value={apiKey} placeholder="API Key" />
+        </Form.Item>
+        <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+          <Button type="primary" htmlType="submit"  >
+            Submit
+          </Button>
+        </Form.Item>
+      </Form>
 
-    </div>
+
+    </Padding>
   )
 }
 
