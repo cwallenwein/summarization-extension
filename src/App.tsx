@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
-import { CopyOutlined, HighlightOutlined, LeftOutlined, FileTextOutlined, ArrowLeftOutlined, DeleteOutlined, EditOutlined, EllipsisOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, QuestionCircleOutlined, KeyOutlined, ApiOutlined } from '@ant-design/icons';
+import { CopyOutlined, ArrowLeftOutlined, DeleteOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, ApiOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, Skeleton, Typography, Tooltip } from 'antd';
 import Storage, { ISummary } from './services/Storage';
+import HuggingFace from "./services/Summarize"
 import 'antd/dist/reset.css';
 import './App.css';
 
@@ -23,7 +24,7 @@ const App: React.FC = () => {
     <div className="App">
       <Card
         id="main"
-        title={activeTab != "main" ? <><BackButton setActiveTab={setActiveTab} /> Highlighter</> : <>Highlighter</>}
+        title={activeTab !== "main" ? <><BackButton setActiveTab={setActiveTab} /> Highlighter</> : <>Highlighter</>}
         extra={[
           <GoToSettingsButton setActiveTab={setActiveTab} />,
           <GoToHelpButton setActiveTab={setActiveTab} />
@@ -82,8 +83,9 @@ const Help: React.FC = (props: any) => {
 }
 
 // TODO Add Button to go back to summaries
-const Settings: React.FC = (props: any) => {
+const Settings: any = (props: any) => {
   const [apiKey, setApiKey] = useState<string>("")
+  //const [formValidationStatus, steFormValidationStatus] = useState<string>("")
 
   // Update displayed API key when it was changed in local storage
   useEffect(() => {
@@ -105,12 +107,21 @@ const Settings: React.FC = (props: any) => {
     await setApiKey(newApiKey)
     await Storage.setApiKey(newApiKey)
     console.log("New API Key: ", newApiKey)
+    const apiKeyValid: boolean = await HuggingFace.isApiKeyValid(newApiKey);
+    if (apiKeyValid) {
+
+    } else {
+
+    }
   }
 
   return (
     <Padding>
       <Paragraph strong>
         Settings
+      </Paragraph>
+      <Paragraph>
+        Current API Key: {apiKey}
       </Paragraph>
       <Form onFinish={onFinish}>
         <Form.Item name="apiKey">
@@ -122,8 +133,6 @@ const Settings: React.FC = (props: any) => {
           </Button>
         </Form.Item>
       </Form>
-
-
     </Padding>
   )
 }
@@ -137,7 +146,7 @@ const BackButton: any = (props: any) => {
 }
 
 function Summaries() {
-  const [allSummaries, setAllSummaries] = useState<string[]>([])
+  const [allSummaries, setAllSummaries] = useState<ISummary[]>([])
 
   useEffect(() => {
     Storage.getHistory().then((result) => {
