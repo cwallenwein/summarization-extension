@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { FC } from 'react';
 import { CopyOutlined, ArrowLeftOutlined, DeleteOutlined, LinkOutlined, QuestionOutlined, SettingOutlined, ApiOutlined } from '@ant-design/icons';
-import { Button, Card, Form, Input, Skeleton, Typography, Tooltip } from 'antd';
+import { Button, Card, Form, Input, Skeleton, Typography, Tooltip, message } from 'antd';
 import Storage, { ISummary } from './services/Storage';
 import HuggingFace from "./services/Summarize"
 import 'antd/dist/reset.css';
@@ -11,7 +11,8 @@ const { Title, Paragraph, Link, Text } = Typography;
 
 // TODO: Test if API key is valid by sending an example request
 // TODO: remove " " from summary text
-// TODO Propper url shortening
+// TODO Propper url shortening in header of summary
+// TODO: message when no text is selected
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main")
@@ -210,11 +211,13 @@ function Summaries() {
 // TODO add loading state
 function SummaryCard(props: any) {
   const [loading, setLoading] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
 
   const copyToClipboard = async () => {
     console.log(props)
     try {
       await navigator.clipboard.writeText(props.summary.content)
+      messageApi.info({ content: 'Copied Summary to Clipboard', icon: < CopyOutlined /> });
     } catch (error) {
       console.error(error)
     }
@@ -222,9 +225,11 @@ function SummaryCard(props: any) {
 
   async function deleteSummary(summary: ISummary) {
     await Storage.deleteSummary(summary)
+    messageApi.info({ content: 'Deleted Summary', icon: < DeleteOutlined /> });
   }
 
   return (
+
     <Card
       style={{
         width: "calc(100% - 32px)",
@@ -237,6 +242,7 @@ function SummaryCard(props: any) {
         <Tooltip title="Delete Summary"><DeleteOutlined onClick={() => deleteSummary(props.summary)} /></Tooltip>
       ]}
     >
+      {contextHolder}
       <Skeleton loading={loading} active>
         <Typography>
           <Tooltip title={props.summary.url}>
