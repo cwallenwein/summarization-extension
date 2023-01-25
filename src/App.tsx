@@ -10,6 +10,8 @@ import './App.css';
 const { Title, Paragraph, Link, Text } = Typography;
 
 // TODO: Test if API key is valid by sending an example request
+// TODO: remove " " from summary text
+// TODO Propper url shortening
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main")
@@ -196,7 +198,7 @@ function Summaries() {
     <>
       {
         allSummaries.reverse().map((item: any, index) => {
-          return <SummaryCard content={item.summary} url={item.url} />
+          return <SummaryCard summary={item} />
         })
       }
     </>
@@ -209,6 +211,19 @@ function Summaries() {
 function SummaryCard(props: any) {
   const [loading, setLoading] = useState(false);
 
+  const copyToClipboard = async () => {
+    console.log(props)
+    try {
+      await navigator.clipboard.writeText(props.summary.content)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  async function deleteSummary(summary: ISummary) {
+    await Storage.deleteSummary(summary)
+  }
+
   return (
     <Card
       style={{
@@ -218,23 +233,22 @@ function SummaryCard(props: any) {
       }}
 
       actions={[
-        <Tooltip title="Copy Summary"><CopyOutlined /></Tooltip>,
-        //<Tooltip title="Link to Original Text"><FileTextOutlined /></Tooltip>,
-        <Tooltip title="Delete Summary"><DeleteOutlined /></Tooltip>
+        <Tooltip title="Copy Summary"><CopyOutlined onClick={copyToClipboard} /></Tooltip>,
+        <Tooltip title="Delete Summary"><DeleteOutlined onClick={() => deleteSummary(props.summary)} /></Tooltip>
       ]}
     >
       <Skeleton loading={loading} active>
         <Typography>
-          <Tooltip title={props.url}>
+          <Tooltip title={props.summary.url}>
             <Text>
-              <Link href={props.url} target="_blank" style={{ fontSize: "12pt" }}>
-                {props.url}
+              <Link href={props.summary.url} target="_blank" style={{ fontSize: "12pt" }}>
+                {props.summary.url}
                 <LinkOutlined style={{ marginLeft: "5px" }} />
               </Link>
             </Text>
           </Tooltip>
           <Paragraph>
-            {props.content}
+            {props.summary.summary}
           </Paragraph>
         </Typography>
       </Skeleton>

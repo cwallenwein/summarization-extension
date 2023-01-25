@@ -57,6 +57,20 @@ export default class Storage {
         }
     }
 
+    static async deleteSummary(summary: ISummary) {
+        try {
+            let history = await Storage.getHistory()
+            if (history) {
+                history = history.filter((s: ISummary) => (s.url !== summary.url) || (s.text !== summary.text) || (s.summary !== summary.summary))
+            } else {
+                throw new Error("No summary returned")
+            }
+            await Storage.setHistory(history)
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
 }
 
 export interface ISummary {
