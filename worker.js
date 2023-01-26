@@ -61,10 +61,9 @@ async function saveSummary(url, text, summary) {
 async function summarizeTextWithHuggingFace(text) {
     try {
         let result = await queryHuggingFace({ "inputs": text })
-        console.log("result", result)
         if (result && result.length >= 1) {
             let summary = result[0]["summary_text"]
-            return JSON.stringify(summary);
+            return summary;
         } else {
             throw new Error("No summary returned")
         }
