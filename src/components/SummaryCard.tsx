@@ -43,12 +43,12 @@ export function SummaryCard(props: any) {
             <Skeleton loading={loading} active>
                 <Typography>
                     <Tooltip title={props.summary.url}>
-                        <Text>
+                        <Paragraph ellipsis={{ rows: 1, expandable: false }}>
                             <Link href={props.summary.url} target="_blank" style={{ fontSize: "12pt" }}>
-                                {props.summary.url}
+                                {props.summary.tabTitle}
                                 <LinkOutlined style={{ marginLeft: "5px" }} />
                             </Link>
-                        </Text>
+                        </Paragraph>
                     </Tooltip>
                     <Paragraph>
                         {props.summary.summary}

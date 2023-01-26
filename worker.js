@@ -18,10 +18,11 @@ async function handleMessage(message, sender, sendResponse) {
     if (message.type === "summarization_request") {
         let tabId = message.tabId
         let url = message.url
+        let tabTitle = message.tabTitle
         let text = await getSelectedText(tabId)
         if (text) {
             let summary = await summarizeTextWithHuggingFace(text)
-            await saveSummary(url, text, summary)
+            await saveSummary(url = url, tabTitle = tabTitle, text = text, summary = summary)
         } else {
             console.error("No text selected")
         }
@@ -47,10 +48,11 @@ async function getSelectedText(tabId) {
 
 
 // Saves the summary to chrome storage
-async function saveSummary(url, text, summary) {
+async function saveSummary(url, tabTitle, text, summary) {
     let history = await getSummaryHistory()
     history.push({
         url: url,
+        tabTitle: tabTitle,
         text: text,
         summary: summary
     })

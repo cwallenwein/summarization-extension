@@ -10,16 +10,17 @@ export const RequestSummaryButton: FC = () => {
         if (activeTab && activeTab.id && activeTab.url) {
             let tabId: number = activeTab.id
             let url: string = activeTab.url
-            await sendSummarizationRequest(url, tabId)
+            let tabTitle: string = activeTab.title || ""
+            await sendSummarizationRequest(url, tabId, tabTitle)
         } else {
             console.error("No active tab")
         }
     }
 
     // Sends a message to the worker script to summarize the highlighted text in the active tab
-    async function sendSummarizationRequest(url: string, tabId: number) {
+    async function sendSummarizationRequest(url: string, tabId: number, tabTitle: string) {
         try {
-            await chrome.runtime.sendMessage({ type: "summarization_request", url: url, tabId: tabId })
+            await chrome.runtime.sendMessage({ type: "summarization_request", url: url, tabId: tabId, tabTitle: tabTitle })
         } catch (error) {
             console.error(error)
         }
