@@ -11,7 +11,6 @@ import 'antd/dist/reset.css';
 import './App.css';
 
 // TODO Propper url shortening in header of summary
-// TODO: remove " " from summary text
 // TODO: Test if API key is valid by sending an example request
 // TODO: message when no text is selected
 // TODO add types
@@ -35,7 +34,7 @@ const App: React.FC = () => {
     <div className="App">
       <Card
         id="main"
-        title={<Title activeTab={activeTab} />}
+        title={<Title activeTab={activeTab} setActiveTab={setActiveTab} />}
         extra={[
           <GoToSettingsButton setActiveTab={setActiveTab} />,
           <GoToHelpButton setActiveTab={setActiveTab} />
