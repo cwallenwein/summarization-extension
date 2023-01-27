@@ -5,7 +5,8 @@ chrome.runtime.onMessage.addListener(handleMessage)
 async function initializeExtension() {
     try {
         await chrome.storage.local.set({
-            history: [],
+            allSummaries: [
+        ],
             apiKey: "Bearer hf_"
         })
     } catch (error) {
@@ -13,19 +14,55 @@ async function initializeExtension() {
     }
 }
 
+// TODO Resolve confusion. Currently a summary can be the text of the summary or an object containing the summary and other information
+// Approaches: call the summary including all information summaryObject, summaryData or sumamryInfo
+//              call the text of the summary summaryText
+
 // Handles incoming messages and calls the appropriate function based on message type
-async function handleMessage(message, sender, sendResponse) {
+function handleMessage(message, sender, sendResponse) {
     if (message.type === "summarization_request") {
+        handleSummarizationRequest(message, sendResponse)
+        return true
+    } else {
+        sendResponse({ type: "error", message: "Unknown message type" })
+    }
+}
+
+async function handleSummarizationRequest(message, sendResponse) {
         let tabId = message.tabId
-        let url = message.url
-        let tabTitle = message.tabTitle
+    try {
         let text = await getSelectedText(tabId)
         if (text) {
+        let url = message.url
+        let tabTitle = message.tabTitle
+            let timestamp = (new Date).getTime()
+
+            if (!navigator.onLine) {
+                sendResponse({ type: "error", message: "Not connected to the internet" })
+                return
+            }
+            try {
+                await createLoadingSummary({ timestamp: timestamp, url: url, tabTitle: tabTitle, text: text })
             let summary = await summarizeTextWithHuggingFace(text)
-            await saveSummary(url = url, tabTitle = tabTitle, text = text, summary = summary)
+                await updateLoadingSummary({ timestamp: timestamp, summary: summary })
+                sendResponse({ type: "success" })
+            } catch (error) {
+                await deleteSummaryByTimestamp(timestamp)
+                sendResponse({ type: "eror", message: "Unknown error" })
+            }
         } else {
-            console.error("No text selected")
+            sendResponse({ type: "error", message: "No text selected" })
         }
+    } catch (error) {
+        sendResponse({ type: "error", message: error.message })
+    }
+}
+
+async function deleteSummaryByTimestamp(timestamp) {
+    let allSummaries = await getAllSummaries()
+    if (allSummaries) {
+        allSummaries = allSummaries.filter((s) => (s.timestamp !== timestamp))
+        await setAllSummaries(allSummaries)
     }
 }
 
@@ -39,44 +76,60 @@ async function getSelectedText(tabId) {
         if (injectionResults && injectionResults.length >= 1) {
             let selection = injectionResults[0].result
             return selection
+        } else {
+            throw new Error("Unknown error")
         }
-        else return ""
     } catch (error) {
-        console.error(error)
+        if (error.message.includes("chrome:// URL") || error.message.includes("edge:// URL")) {
+            throw new Error("Unable to select text in browser-internal pages")
+        } else {
+            throw new Error("Unknown error")
+        }
     }
 }
 
 
 // Saves the summary to chrome storage
-async function saveSummary(url, tabTitle, text, summary) {
-    let history = await getSummaryHistory()
-    history.push({
+async function createLoadingSummary({ timestamp, url, tabTitle, text }) {
+    // TODO this doesn not only contain summaries but also more information about them, how do I call it
+    let allSummaries = await getAllSummaries()
+    allSummaries.push({
+        timestamp: timestamp,
         url: url,
         tabTitle: tabTitle,
         text: text,
-        summary: summary
+        summary: "",
+        loading: true
     })
-    await setSummaryHistory(history)
+    await setAllSummaries(allSummaries)
+}
+
+async function updateLoadingSummary({ timestamp, summary }) {
+    let allSummaries = await getAllSummaries()
+    let index = allSummaries.findIndex((item) => {
+        return item.timestamp === timestamp
+    })
+    if (index === -1) {
+        throw new Error("Unknown error")
+    }
+    allSummaries[index].summary = summary
+    allSummaries[index].loading = false
+    await setAllSummaries(allSummaries)
 }
 
 // Summarizes the text using the Hugging Face API
 async function summarizeTextWithHuggingFace(text) {
-    try {
         let result = await queryHuggingFace({ "inputs": text })
         if (result && result.length >= 1) {
             let summary = result[0]["summary_text"]
             return summary;
         } else {
             throw new Error("No summary returned")
-        }
-    } catch (error) {
-        console.error(error)
     }
 }
 
 // Queries the Hugging Face API
 async function queryHuggingFace(request) {
-    try {
         let apiKey = await getApiKey()
         console.log("apiKey", apiKey)
         const response = await fetch(
@@ -89,9 +142,6 @@ async function queryHuggingFace(request) {
         );
         const result = await response.json();
         return result;
-    } catch (error) {
-        console.error(error)
-    }
 }
 
 // Retrieves the API key from chrome storage
@@ -104,21 +154,21 @@ async function getApiKey() {
     }
 }
 
-// Retrieves the summary history from chrome storage
-async function getSummaryHistory() {
+// Retrieves the all summaries from chrome storage
+async function getAllSummaries() {
     try {
-        let result = await chrome.storage.local.get("history")
-        return result.history;
+        let result = await chrome.storage.local.get("allSummaries")
+        return result.allSummaries;
     } catch (error) {
         console.error(error)
     }
 }
 
-// Sets the summary history in chrome storage
-async function setSummaryHistory(newHistory) {
+// Sets the allSummaries in chrome storage
+async function setAllSummaries(allSummaries) {
     try {
         await chrome.storage.local.set({
-            history: newHistory
+            allSummaries: allSummaries
         })
     } catch (error) {
         console.error(error)

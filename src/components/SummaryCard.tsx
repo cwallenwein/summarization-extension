@@ -4,12 +4,11 @@ import { CopyOutlined, DeleteOutlined, LinkOutlined } from '@ant-design/icons';
 import Storage, { ISummary } from '../services/Storage';
 const { Paragraph, Link, Text } = Typography;
 
-// TODO remove HTTPs from url
-// TODO add loading state
 export function SummaryCard(props: any) {
     const [loading, setLoading] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
 
+    const summary = props.summary
     const copyToClipboard = async () => {
         console.log(props)
         try {
@@ -40,7 +39,7 @@ export function SummaryCard(props: any) {
             ]}
         >
             {contextHolder}
-            <Skeleton loading={loading} active>
+            <Skeleton loading={props.summary.loading} active>
                 <Typography>
                     <Tooltip title={props.summary.url}>
                         <Paragraph ellipsis={{ rows: 1, expandable: false }}>

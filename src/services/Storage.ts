@@ -22,11 +22,11 @@ export default class Storage {
         }
     }
 
-    // Gets the history of summaries from chrome storage
-    static async getHistory() {
+    // Gets allSummaries from chrome storage
+    static async getAllSummaries() {
         try {
-            let result = await chrome.storage.local.get("history")
-            return result.history
+            let result = await chrome.storage.local.get("allSummaries")
+            return result.allSummaries
         } catch (error) {
             console.error(error)
         }
@@ -36,22 +36,22 @@ export default class Storage {
     // Saves the summary to chrome storage
     static async saveSummary(summary: ISummary) {
         try {
-            let history = await Storage.getHistory()
-            if (history) {
-                history.push(summary)
+            let allSummaries = await Storage.getAllSummaries()
+            if (allSummaries) {
+                allSummaries.push(summary)
             } else {
                 throw new Error("No summary returned")
             }
-            await Storage.setHistory(history)
+            await Storage.setAllSummaries(allSummaries)
         } catch (error) {
             console.error(error)
         }
     }
 
-    // Set the summary history to chrome storage
-    static async setHistory(history: ISummary[]) {
+    // Set the allSummaries in chrome storage
+    static async setAllSummaries(allSummaries: ISummary[]) {
         try {
-            await chrome.storage.local.set({ history })
+            await chrome.storage.local.set({ allSummaries })
         } catch (error) {
             console.error(error)
         }
@@ -59,13 +59,13 @@ export default class Storage {
 
     static async deleteSummary(summary: ISummary) {
         try {
-            let history = await Storage.getHistory()
-            if (history) {
-                history = history.filter((s: ISummary) => (s.url !== summary.url) || (s.text !== summary.text) || (s.summary !== summary.summary))
+            let allSummaries = await Storage.getAllSummaries()
+            if (allSummaries) {
+                allSummaries = allSummaries.filter((s: ISummary) => (s.url !== summary.url) || (s.text !== summary.text) || (s.summary !== summary.summary))
             } else {
                 throw new Error("No summary returned")
             }
-            await Storage.setHistory(history)
+            await Storage.setAllSummaries(allSummaries)
         } catch (error) {
             console.error(error)
         }

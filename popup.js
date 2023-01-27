@@ -4,16 +4,16 @@ chrome.storage.onChanged.addListener(handleStorageUpdate)
 // Builds all elements of the popup
 async function buildPopup() {
   addSummarizeButtonEventListener()
-  await buildSummaryHistory()
+  await buildAllSummariesTable()
   await buildApiKeyForm()
   await displayCurrentApiKey()
 }
 
-// Handles updated history in chrome storage
+// Handles updated allSummaries-value in chrome storage
 async function handleStorageUpdate(changes, _) {
   for (key in changes) {
-    if (key === "history") {
-      await buildSummaryHistory()
+    if (key === "allSummaries") {
+      await buildAllSummariesTable()
     }
   }
 }
@@ -84,11 +84,11 @@ async function displayCurrentApiKey() {
   }
 }
 
-// Retrieves the summary history from chrome storage
-async function getHistory() {
+// Retrieves all summaries from chrome storage
+async function getAllSummaries() {
   try {
-    let result = await chrome.storage.local.get("history")
-    return result.history
+    let result = await chrome.storage.local.get("allSummaries")
+    return result.allSummaries
   } catch (error) {
     console.error(error)
   }
@@ -112,17 +112,17 @@ async function setApiKey(apiKey) {
   }
 }
 
-// Builds the summary history table
-async function buildSummaryHistory() {
+// Builds the a table of all summaries
+async function buildAllSummariesTable() {
   try {
-    let history = await getHistory()
+    let allSummaries = await getAllSummaries()
     let headerRow = buildHeaderRow()
 
     let tableBody = document.createElement("tbody")
     tableBody.appendChild(headerRow)
 
-    for (let i = history.length - 1; i >= 0; i--) {
-      let row = buildRowFromSummary(history[i])
+    for (let i = allSummaries.length - 1; i >= 0; i--) {
+      let row = buildRowFromSummary(allSummaries[i])
       tableBody.appendChild(row)
     }
 
@@ -147,7 +147,7 @@ function buildRowFromSummary(summary) {
   return row
 }
 
-// Builds the header row for the summary history table
+// Builds the header row for the allSummaries-table
 function buildHeaderRow() {
   let url = buildTableHeader("URL")
   let text = buildTableHeader("Text")
