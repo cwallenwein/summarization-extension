@@ -6,14 +6,13 @@ const { Paragraph, Link, Text } = Typography;
 
 export function SummaryCard(props: any) {
   const [loading, setLoading] = useState(false);
-  const [messageApi, contextHolder] = message.useMessage();
 
   const summary = props.summary;
   const copyToClipboard = async () => {
     console.log(props);
     try {
-      await navigator.clipboard.writeText(props.summary.content);
-      messageApi.info({
+      await navigator.clipboard.writeText(props.summary.summary);
+      props.messageApi.info({
         content: "Copied Summary to Clipboard",
         icon: <CopyOutlined />,
       });
@@ -25,12 +24,17 @@ export function SummaryCard(props: any) {
   async function deleteSummary(summary: ISummary) {
     try {
       await Storage.deleteSummaryByTimestamp(summary.timestamp);
-      messageApi.info({ content: "Deleted Summary", icon: <DeleteOutlined /> });
+      props.messageApi.info({
+        content: "Deleted Summary",
+        icon: <DeleteOutlined />,
+      });
     } catch (error) {
       console.error(error);
     }
   }
 
+  // TODO: skeleton only for summary text and not for the rest of the card
+  // TODO: add button to regenerate summary
   return (
     <Card
       style={{
@@ -47,7 +51,6 @@ export function SummaryCard(props: any) {
         </Tooltip>,
       ]}
     >
-      {contextHolder}
       <Skeleton loading={props.summary.loading} active>
         <Typography>
           <Tooltip title={props.summary.url}>
