@@ -44,15 +44,16 @@ export const Settings: any = (props: any) => {
     }
   };
 
+  //<Paragraph>Current API Key: {apiKey}</Paragraph>;
   return (
     <>
       {contextHolder}
       <Padding>
         <Paragraph strong>Settings</Paragraph>
-        <Paragraph>Current API Key: {apiKey}</Paragraph>
+
         <Form onFinish={onFinish}>
           <Form.Item name="apiKey">
-            <Input
+            <Input.Password
               prefix={<ApiOutlined />}
               value={apiKey}
               placeholder="API Key"
