@@ -6,7 +6,7 @@ async function initializeExtension() {
   try {
     await chrome.storage.local.set({
       allSummaries: [],
-      apiKey: "Bearer hf_",
+      apiKey: "",
     });
   } catch (error) {
     console.error(error);
@@ -19,72 +19,82 @@ async function initializeExtension() {
 
 // Handles incoming messages and calls the appropriate function based on message type
 function handleMessage(message, _, sendResponse) {
-  if (message.type === "summarization_request") {
-    handleSummarizationRequest(message, sendResponse);
-    return true;
-  } else if (message.type === "api_key_validation_request") {
-    handleApiKeyValidationRequest(message, sendResponse);
-    return true;
-  } else {
-    sendResponse({ type: "error", message: "Unknown message type" });
+  try {
+    if (message.type === "summarization_request") {
+      handleSummarizationRequest(message, sendResponse);
+      return true;
+    } else if (message.type === "api_key_validation_request") {
+      handleApiKeyValidationRequest(message, sendResponse);
+      return true;
+    } else {
+      sendResponse({ type: "error", message: "Unknown message type" });
+    }
+  } catch (error) {
+    console.error(error);
+    sendResponse({ type: "error", message: error.message });
   }
 }
 
+// Checks
 async function handleApiKeyValidationRequest(message, sendResponse) {
-  if (!navigator.onLine) {
-    sendResponse({
-      type: "error",
-      message: "Not connected to the internet",
-    });
-    return;
-  }
+  // check internet connection
+  const connectedToInternet = isConnectedToInternet(sendResponse);
+  if (!connectedToInternet) return;
 
-  const response = await queryHuggingFace(message.apiKey, "");
-  if (response?.ok) {
-    return sendResponse({ type: "success" });
-  } else {
-    if (response?.status === 400) {
-      return sendResponse({ type: "error", message: "Invalid API Key" });
+  // check if api key is valid
+  try {
+    const apiKey = message.apiKey;
+    const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
+    if (apiKeyValid) {
+      return sendResponse({ type: "success" });
     } else {
-      return sendResponse({ type: "error", message: JSON.stringify(response) });
+      return sendResponse({ type: "error", message: "Invalid API Key" });
     }
+  } catch (error) {
+    console.error(error);
+    return sendResponse({ type: "error", message: error.message });
   }
 }
 
 async function handleSummarizationRequest(message, sendResponse) {
+  let url = message.url;
+  let tabId = message.tabId;
+  let tabTitle = message.tabTitle;
+
+  const connectedToInternet = isConnectedToInternet(sendResponse);
+  if (!connectedToInternet) return;
+
   try {
-    let tabId = message.tabId;
     let text = await getSelectedText(tabId);
-
     if (text) {
-      checkInternetConnection(sendResponse);
-
-      let url = message.url;
-      let tabTitle = message.tabTitle;
-      const timestamp = await Storage.createLoadingSummary({
-        url,
-        tabTitle,
-        text,
-      });
-
-      try {
-        let summary = await Cohere.summarize(text);
-        await Storage.updateLoadingSummary({
-          timestamp: timestamp,
-          summary: summary,
-        });
-        sendResponse({ type: "success" });
-      } catch (error) {
-        await Storage.deleteSummaryByTimestamp(timestamp);
-        sendResponse({ type: "error", message: "Unknown error" });
-        console.error(error);
-      }
+      summarizeText({ text, url, tabTitle, sendResponse });
     } else {
       sendResponse({ type: "error", message: "No text selected" });
     }
   } catch (error) {
     console.error(error);
     sendResponse({ type: "error", message: error.message });
+  }
+}
+
+async function summarizeText({ text, url, tabTitle, sendResponse }) {
+  try {
+    const timestamp = await Storage.createLoadingSummary({
+      url,
+      tabTitle,
+      text,
+    });
+
+    let summary = await Cohere.summarize(text);
+    await Storage.updateLoadingSummary({
+      timestamp: timestamp,
+      summary: summary,
+    });
+    sendResponse({ type: "success" });
+  } catch (error) {
+    await Storage.deleteSummaryByTimestamp(timestamp);
+    sendResponse({ type: "error", message: "Unknown error" });
+    console.error(error);
   }
 }
 
@@ -118,6 +128,20 @@ class Cohere {
       console.error("Invalid Bearer Token");
     } else {
       console.error(`HTTP Response Code: ${response?.status}`);
+    }
+  }
+
+  static async isApiKeyValid(apiKey) {
+    const response = await this.sendRequest("", apiKey);
+    if (response?.ok) {
+      return true;
+    } else {
+      const status = response?.status;
+      if (status == 401 || status == 403) {
+        return false;
+      } else {
+        throw new Error(`HTTP Response Code: ${status}`);
+      }
     }
   }
 
@@ -188,10 +212,12 @@ async function getSelectedText(tabId) {
   }
 }
 
-function checkInternetConnection(sendResponse) {
+function isConnectedToInternet(sendResponse) {
   if (!navigator.onLine) {
     sendResponse({ type: "error", message: "Not connected to the internet" });
-    return;
+    return false;
+  } else {
+    return true;
   }
 }
 
