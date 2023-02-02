@@ -52,34 +52,30 @@ async function handleApiKeyValidationRequest(message, sendResponse) {
 }
 
 async function handleSummarizationRequest(message, sendResponse) {
-  let tabId = message.tabId;
   try {
+    let tabId = message.tabId;
     let text = await getSelectedText(tabId);
+
     if (text) {
+      checkInternetConnection(sendResponse);
+
       let url = message.url;
       let tabTitle = message.tabTitle;
-      let timestamp = new Date().getTime();
+      const timestamp = await Storage.createLoadingSummary({
+        url,
+        tabTitle,
+        text,
+      });
 
-      if (!navigator.onLine) {
-        sendResponse({
-          type: "error",
-          message: "Not connected to the internet",
-        });
-        return;
-      }
       try {
-        await createLoadingSummary({
+        let summary = await Cohere.summarize(text);
+        await Storage.updateLoadingSummary({
           timestamp: timestamp,
-          url: url,
-          tabTitle: tabTitle,
-          text: text,
+          summary: summary,
         });
-        apiKey = await getApiKey();
-        let summary = await summarizeTextWithHuggingFace(apiKey, text);
-        await updateLoadingSummary({ timestamp: timestamp, summary: summary });
         sendResponse({ type: "success" });
       } catch (error) {
-        await deleteSummaryByTimestamp(timestamp);
+        await Storage.deleteSummaryByTimestamp(timestamp);
         sendResponse({ type: "error", message: "Unknown error" });
         console.error(error);
       }
@@ -92,11 +88,77 @@ async function handleSummarizationRequest(message, sendResponse) {
   }
 }
 
-async function deleteSummaryByTimestamp(timestamp) {
-  let allSummaries = await getAllSummaries();
-  if (allSummaries) {
-    allSummaries = allSummaries.filter((s) => s.timestamp !== timestamp);
-    await setAllSummaries(allSummaries);
+class Cohere {
+  // TODO: if the stop sequence was used in the prompt, filter it out
+  static async summarize(text) {
+    try {
+      const response = await this.sendRequest(text);
+      if (response?.ok) {
+        return await this.handleSuccessfulRequest(response);
+      } else {
+        await this.handleFailedRequest(response);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  static async handleSuccessfulRequest(response) {
+    let result = await response.json();
+    if (result["text"]) {
+      let summary = result["text"];
+      summary = summary.replace("--", "");
+      return summary;
+    } else {
+      console.error("Cohere API didn't return a summary");
+    }
+  }
+  static async handleFailedRequest(response) {
+    if (response?.status == 400) {
+      console.error("Invalid Bearer Token");
+    } else {
+      console.error(`HTTP Response Code: ${response?.status}`);
+    }
+  }
+
+  static async sendRequest(text) {
+    const url = "https://api.cohere.ai/generate";
+    const options = await this.generateOptions(text);
+    let response = await fetch(url, options);
+    return response;
+  }
+
+  static generatePrompt(selectedText) {
+    const intro = "This program summarizes articles from the internet.\n\n";
+    const example1 =
+      "Passage: Is Wordle getting tougher to solve? Players seem to be convinced that the game has gotten harder in recent weeks ever since The New York Times bought it from developer Josh Wardle in late January. The Times has come forward and shared that this likely isn't the case. That said, the NYT did mess with the back end code a bit, removing some offensive and sexual language, as well as some obscure words There is a viral thread claiming that a confirmation bias was at play. One Twitter user went so far as to claim the game has gone to 'the dusty section of the dictionary' to find its latest words.\n\nTLDR: Wordle has not gotten more difficult to solve.\n--\n";
+    const example2 =
+      "Passage: ArtificialIvan, a seven-year-old, London-based payment and expense management software company, has raised $190 million in Series C funding led by ARG Global, with participation from D9 Capital Group and Boulder Capital. Earlier backers also joined the round, including Hilton Group, Roxanne Capital, Paved Roads Ventures, Brook Partners, and Plato Capital.\n\nTLDR: ArtificialIvan has raised $190 million in Series C funding.\n--\n";
+    const prompt =
+      intro + example1 + example2 + "Passage: " + selectedText + "\n\nTLDR:";
+    return prompt;
+  }
+
+  static async generateOptions(text) {
+    const apiKey = "Bearer " + (await ApiKey.get());
+    const prompt = this.generatePrompt(text);
+    const body = JSON.stringify({
+      model: "xlarge",
+      prompt: prompt,
+      max_tokens: 300,
+      temperature: 0.9,
+      stop_sequences: ["--"],
+    });
+    const options = {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        authorization: apiKey,
+      },
+      body: body,
+    };
+    return options;
   }
 }
 
@@ -120,109 +182,108 @@ async function getSelectedText(tabId) {
     ) {
       throw new Error("Unable to select text in browser-internal pages");
     } else {
+      console.error(error);
       throw new Error("Unknown error");
     }
   }
 }
 
-// Saves the summary to chrome storage
-async function createLoadingSummary({ timestamp, url, tabTitle, text }) {
-  // TODO this doesn not only contain summaries but also more information about them, how do I call it
-  let allSummaries = await getAllSummaries();
-  allSummaries.push({
-    timestamp: timestamp,
-    url: url,
-    tabTitle: tabTitle,
-    text: text,
-    summary: "",
-    loading: true,
-  });
-  await setAllSummaries(allSummaries);
-}
-
-async function updateLoadingSummary({ timestamp, summary }) {
-  let allSummaries = await getAllSummaries();
-  let index = allSummaries.findIndex((item) => {
-    return item.timestamp === timestamp;
-  });
-  if (index === -1) {
-    throw new Error("Unknown error");
+function checkInternetConnection(sendResponse) {
+  if (!navigator.onLine) {
+    sendResponse({ type: "error", message: "Not connected to the internet" });
+    return;
   }
-  allSummaries[index].summary = summary;
-  allSummaries[index].loading = false;
-  await setAllSummaries(allSummaries);
 }
 
-// Summarizes the text using the Hugging Face API
-async function summarizeTextWithHuggingFace(apiKey, text) {
-  try {
-    const response = await queryHuggingFace(apiKey || "", text);
-    if (response?.ok) {
-      let result = await response.json();
-      if (result && result.length >= 1) {
-        let summary = result[0]["summary_text"];
-        return summary;
-      } else {
-        console.log("No summary returned from API");
-      }
-    } else {
-      if (response?.status == 400) {
-        console.log("Invalid Bearer Token");
-      } else {
-        console.log(`HTTP Response Code: ${response?.status}`);
-      }
-      return response;
+// Gets the API key from chrome storage
+class ApiKey {
+  // Retrieves the API key from chrome storage
+  static async get() {
+    try {
+      let result = await chrome.storage.local.get("apiKey");
+      let apiKey = result.apiKey;
+      return apiKey;
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.error(error);
   }
 }
 
-// Queries the Hugging Face API
-async function queryHuggingFace(apiKey, request) {
-  apiKey = "Bearer " + apiKey;
-  try {
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
-      {
-        headers: { Authorization: apiKey || "" },
-        method: "POST",
-        body: JSON.stringify(request),
+// Saves, gets and deletes summaries from chrome storage
+class Storage {
+  // Gets allSummaries from chrome storage
+  static async getAllSummaries() {
+    try {
+      let result = await chrome.storage.local.get("allSummaries");
+      return result.allSummaries;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // Set the allSummaries in chrome storage
+  static async setAllSummaries(allSummaries) {
+    try {
+      await chrome.storage.local.set({ allSummaries });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // Deletes a summary with a specific timestamp from chrome storage
+  static async deleteSummaryByTimestamp(timestamp) {
+    try {
+      let allSummaries = await this.getAllSummaries();
+      if (allSummaries) {
+        allSummaries = allSummaries.filter((s) => s.timestamp !== timestamp);
+        await this.setAllSummaries(allSummaries);
       }
-    );
-    return response;
-  } catch (error) {
-    console.error(error);
+    } catch (error) {
+      console.error(error);
+    }
   }
-}
 
-// Retrieves the API key from chrome storage
-async function getApiKey() {
-  try {
-    let result = await chrome.storage.local.get("apiKey");
-    return result.apiKey;
-  } catch (error) {
-    console.error(error);
+  // Saves a summary to chrome storage
+  static async saveSummary(summary) {
+    try {
+      let allSummaries = await this.getAllSummaries();
+      if (allSummaries) {
+        allSummaries.push(summary);
+      } else {
+        throw new Error("No summary returned");
+      }
+      await this.setAllSummaries(allSummaries);
+    } catch (error) {
+      console.error(error);
+    }
   }
-}
 
-// Retrieves the all summaries from chrome storage
-async function getAllSummaries() {
-  try {
-    let result = await chrome.storage.local.get("allSummaries");
-    return result.allSummaries;
-  } catch (error) {
-    console.error(error);
+  // Saves the summary to chrome storage
+  static async createLoadingSummary({ url, tabTitle, text }) {
+    const timestamp = new Date().getTime();
+    const loadingSummary = {
+      timestamp: timestamp,
+      url: url,
+      tabTitle: tabTitle,
+      text: text,
+      summary: "",
+      loading: true,
+    };
+    await this.saveSummary(loadingSummary);
+    return timestamp;
   }
-}
 
-// Sets the allSummaries in chrome storage
-async function setAllSummaries(allSummaries) {
-  try {
-    await chrome.storage.local.set({
-      allSummaries: allSummaries,
+  // Updates the summary in chrome storage
+  static async updateLoadingSummary({ timestamp, summary }) {
+    let allSummaries = await this.getAllSummaries();
+    let index = allSummaries.findIndex((item) => {
+      return item.timestamp === timestamp;
     });
-  } catch (error) {
-    console.error(error);
+    if (index === -1) {
+      throw new Error("No summary found with the specified timestamp");
+    }
+    allSummaries[index].summary = summary;
+    allSummaries[index].loading = false;
+    await this.setAllSummaries(allSummaries);
   }
 }
