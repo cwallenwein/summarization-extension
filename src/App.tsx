@@ -20,6 +20,7 @@ import "./App.css";
 // TODO when summarize is clicked, immediately add loading summary to all summaries. When response is received, update the summary in allSummaries and remove loading state from button
 // TODO move header to card header
 // TODO message if there is no summary yet
+// TODO add option to regenerate a summary
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
@@ -42,8 +43,7 @@ const App: React.FC = () => {
         style={{ textAlign: "left" }}
       >
         <div style={{ overflowY: "auto", height: 400, width: 500 }}>
-          {" "}
-          {tabs[activeTab]}{" "}
+          {tabs[activeTab]}
         </div>
       </Card>
       <RequestSummaryButton />

@@ -12,7 +12,7 @@ export function SummaryCard(props: any) {
   const copyToClipboard = async () => {
     console.log(props);
     try {
-      await navigator.clipboard.writeText(props.summary.content);
+      await navigator.clipboard.writeText(props.summary.summary);
       messageApi.info({
         content: "Copied Summary to Clipboard",
         icon: <CopyOutlined />,
@@ -31,6 +31,8 @@ export function SummaryCard(props: any) {
     }
   }
 
+  // TODO: skeleton only for summary text and not for the rest of the card
+  // TODO: add button to regenerate summary
   return (
     <Card
       style={{
