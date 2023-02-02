@@ -1,3 +1,3 @@
-FROM arm64v8/node:14.17.0
-RUN npm i
+FROM arm64v8/node:18.13.0
+#RUN npm i
 EXPOSE 8001
