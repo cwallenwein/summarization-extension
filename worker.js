@@ -78,8 +78,10 @@ async function handleSummarizationRequest(message, sendResponse) {
 }
 
 async function summarizeText({ text, url, tabTitle, sendResponse }) {
+  const timestamp = new Date().getTime();
   try {
-    const timestamp = await Storage.createLoadingSummary({
+    await Storage.createLoadingSummary({
+      timestamp,
       url,
       tabTitle,
       text,
@@ -93,7 +95,7 @@ async function summarizeText({ text, url, tabTitle, sendResponse }) {
     sendResponse({ type: "success" });
   } catch (error) {
     await Storage.deleteSummaryByTimestamp(timestamp);
-    sendResponse({ type: "error", message: "Unknown error" });
+    sendResponse({ type: "error", message: error.message });
     console.error(error);
   }
 }
@@ -101,15 +103,11 @@ async function summarizeText({ text, url, tabTitle, sendResponse }) {
 class Cohere {
   // TODO: if the stop sequence was used in the prompt, filter it out
   static async summarize(text) {
-    try {
-      const response = await this.sendRequest(text);
-      if (response?.ok) {
-        return await this.handleSuccessfulRequest(response);
-      } else {
-        await this.handleFailedRequest(response);
-      }
-    } catch (error) {
-      console.error(error);
+    const response = await this.sendRequest(text);
+    if (response?.ok) {
+      return await this.handleSuccessfulRequest(response);
+    } else {
+      await this.handleFailedRequest(response);
     }
   }
 
@@ -124,10 +122,12 @@ class Cohere {
     }
   }
   static async handleFailedRequest(response) {
-    if (response?.status == 400) {
-      console.error("Invalid Bearer Token");
+    const status = response?.status;
+    // TODO: not all 4xx errors are invalid api keys
+    if (status >= 400 && status < 500) {
+      throw Error("Invalid Bearer Token");
     } else {
-      console.error(`HTTP Response Code: ${response?.status}`);
+      throw Error(`HTTP Response Code: ${response?.status}`);
     }
   }
 
@@ -285,8 +285,7 @@ class Storage {
   }
 
   // Saves the summary to chrome storage
-  static async createLoadingSummary({ url, tabTitle, text }) {
-    const timestamp = new Date().getTime();
+  static async createLoadingSummary({ timestamp, url, tabTitle, text }) {
     const loadingSummary = {
       timestamp: timestamp,
       url: url,
