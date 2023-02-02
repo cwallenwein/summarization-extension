@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { FC } from "react";
-import { Card } from "antd";
+import { Card, message } from "antd";
 import Storage, { ISummary } from "./services/Storage";
 import { Help } from "./components/Help";
 import { Settings } from "./components/Settings";
@@ -66,6 +66,7 @@ const Title = (props: any) => {
 
 function Summaries() {
   const [allSummaries, setAllSummaries] = useState<ISummary[]>([]);
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     Storage.getAllSummaries().then((result) => {
@@ -75,8 +76,9 @@ function Summaries() {
 
   return (
     <>
+      {contextHolder}
       {allSummaries.reverse().map((item: any, index) => {
-        return <SummaryCard summary={item} />;
+        return <SummaryCard summary={item} messageApi={messageApi} />;
       })}
     </>
   );
