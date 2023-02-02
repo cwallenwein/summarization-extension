@@ -16,10 +16,12 @@ export const Settings: any = (props: any) => {
   useEffect(() => {
     const updateApiKey = async () => {
       const result = await Storage.getApiKey();
-      if (result) {
-        setApiKey(result);
+
+      if (result === undefined) {
+        console.error("No API key specified yet");
+        return;
       } else {
-        console.error("No API key found in local storage");
+        setApiKey(result);
       }
     };
 

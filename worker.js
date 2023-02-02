@@ -6,7 +6,7 @@ async function initializeExtension() {
   try {
     await chrome.storage.local.set({
       allSummaries: [],
-      apiKey: "",
+      apiKey: undefined,
     });
   } catch (error) {
     console.error(error);
@@ -45,6 +45,7 @@ async function handleApiKeyValidationRequest(message, sendResponse) {
   try {
     const apiKey = message.apiKey;
     const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
+    console.log("API Key Valid: " + apiKeyValid);
     if (apiKeyValid) {
       return sendResponse({ type: "success" });
     } else {
@@ -103,6 +104,7 @@ async function summarizeText({ text, url, tabTitle, sendResponse }) {
 class Cohere {
   // TODO: if the stop sequence was used in the prompt, filter it out
   static async summarize(text) {
+    console.log("Text to summarize: " + text);
     const response = await this.sendRequest(text);
     if (response?.ok) {
       return await this.handleSuccessfulRequest(response);
@@ -115,7 +117,9 @@ class Cohere {
     let result = await response.json();
     if (result["text"]) {
       let summary = result["text"];
+      console.log("Summary before: " + summary);
       summary = summary.replace("--", "");
+      console.log("Summary after: " + summary);
       return summary;
     } else {
       console.error("Cohere API didn't return a summary");
@@ -152,17 +156,6 @@ class Cohere {
     return response;
   }
 
-  static generatePrompt(selectedText) {
-    const intro = "This program summarizes articles from the internet.\n\n";
-    const example1 =
-      "Passage: Is Wordle getting tougher to solve? Players seem to be convinced that the game has gotten harder in recent weeks ever since The New York Times bought it from developer Josh Wardle in late January. The Times has come forward and shared that this likely isn't the case. That said, the NYT did mess with the back end code a bit, removing some offensive and sexual language, as well as some obscure words There is a viral thread claiming that a confirmation bias was at play. One Twitter user went so far as to claim the game has gone to 'the dusty section of the dictionary' to find its latest words.\n\nTLDR: Wordle has not gotten more difficult to solve.\n--\n";
-    const example2 =
-      "Passage: ArtificialIvan, a seven-year-old, London-based payment and expense management software company, has raised $190 million in Series C funding led by ARG Global, with participation from D9 Capital Group and Boulder Capital. Earlier backers also joined the round, including Hilton Group, Roxanne Capital, Paved Roads Ventures, Brook Partners, and Plato Capital.\n\nTLDR: ArtificialIvan has raised $190 million in Series C funding.\n--\n";
-    const prompt =
-      intro + example1 + example2 + "Passage: " + selectedText + "\n\nTLDR:";
-    return prompt;
-  }
-
   static async generateOptions(text) {
     const apiKey = "Bearer " + (await ApiKey.get());
     const prompt = this.generatePrompt(text);
@@ -183,6 +176,17 @@ class Cohere {
       body: body,
     };
     return options;
+  }
+
+  static generatePrompt(selectedText) {
+    const intro = "This program summarizes articles from the internet.\n\n";
+    const example1 =
+      "Passage: Is Wordle getting tougher to solve? Players seem to be convinced that the game has gotten harder in recent weeks ever since The New York Times bought it from developer Josh Wardle in late January. The Times has come forward and shared that this likely isn't the case. That said, the NYT did mess with the back end code a bit, removing some offensive and sexual language, as well as some obscure words There is a viral thread claiming that a confirmation bias was at play. One Twitter user went so far as to claim the game has gone to 'the dusty section of the dictionary' to find its latest words.\n\nTLDR: Wordle has not gotten more difficult to solve.\n--\n";
+    const example2 =
+      "Passage: ArtificialIvan, a seven-year-old, London-based payment and expense management software company, has raised $190 million in Series C funding led by ARG Global, with participation from D9 Capital Group and Boulder Capital. Earlier backers also joined the round, including Hilton Group, Roxanne Capital, Paved Roads Ventures, Brook Partners, and Plato Capital.\n\nTLDR: ArtificialIvan has raised $190 million in Series C funding.\n--\n";
+    const prompt =
+      intro + example1 + example2 + "Passage: " + selectedText + "\n\nTLDR:";
+    return prompt;
   }
 }
 
