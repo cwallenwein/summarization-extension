@@ -2,7 +2,6 @@ import React, { FC, useState, useEffect } from "react";
 import { Button, Form, Input, Typography, message } from "antd";
 import { ApiOutlined } from "@ant-design/icons";
 import Storage, { ISummary } from "../services/Storage";
-import HuggingFace from "../services/Summarize";
 import { Padding } from "./Style";
 const { Paragraph } = Typography;
 
@@ -28,6 +27,7 @@ export const Settings: any = (props: any) => {
     updateApiKey().catch(console.error);
   });
 
+  // TODO: add preloader
   // When the user changes the API key, save it to local storage
   const onFinish = async (values: any) => {
     const newApiKey = values.apiKey;
