@@ -5,6 +5,7 @@ import Storage, { ISummary } from "./services/Storage";
 import { Help } from "./components/Help";
 import { Settings } from "./components/Settings";
 import { SummaryCard } from "./components/SummaryCard";
+import { NoSummariesInfo } from "./components/NoSummariesInfo";
 import {
   BackButton,
   GoToSettingsButton,
@@ -17,16 +18,15 @@ import "./App.css";
 // TODO: Test if API key is valid by sending an example request
 // TODO add types
 // TODO add documentation
-// TODO when summarize is clicked, immediately add loading summary to all summaries. When response is received, update the summary in allSummaries and remove loading state from button
 // TODO move header to card header
-// TODO message if there is no summary yet
 // TODO add option to regenerate a summary
+// TODO if api key is currently being validated in the settings and the user switches to another tab, the validation-result-notifcation should still be shown
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("main");
 
   const tabs: { [key: string]: any } = {
-    main: <Summaries />,
+    main: <Summaries setActiveTab={setActiveTab} />,
     settings: <Settings />,
     help: <Help />,
   };
@@ -64,7 +64,7 @@ const Title = (props: any) => {
   }
 };
 
-function Summaries() {
+const Summaries: any = (props: any) => {
   const [allSummaries, setAllSummaries] = useState<ISummary[]>([]);
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -74,14 +74,25 @@ function Summaries() {
     });
   });
 
-  return (
-    <>
-      {contextHolder}
-      {allSummaries.reverse().map((item: any, index) => {
-        return <SummaryCard summary={item} messageApi={messageApi} />;
-      })}
-    </>
-  );
-}
+  const AllSummaries = allSummaries.reverse().map((item: any, index) => {
+    return <SummaryCard summary={item} messageApi={messageApi} />;
+  });
+
+  if (allSummaries.length === 0) {
+    return (
+      <>
+        {contextHolder}
+        <NoSummariesInfo setActiveTab={props.setActiveTab} />
+      </>
+    );
+  } else {
+    return (
+      <>
+        {contextHolder}
+        {AllSummaries}
+      </>
+    );
+  }
+};
 
 export default App;
