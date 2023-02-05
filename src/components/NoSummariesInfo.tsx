@@ -1,8 +1,73 @@
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import { Typography, Steps, Space } from "antd";
+import Storage from "../services/Storage";
+import { LoadingOutlined } from "@ant-design/icons";
+
 const { Paragraph, Link, Text } = Typography;
 
 export const NoSummariesInfo: any = (props: any) => {
+
+  const [apiKeyValidating, setApiKeyValidating] = useState<boolean>(false);
+  const [apiKey, setApiKey] = useState<string>("");
+  const [current, setCurrent] = useState<number>(0);
+
+  // initialize apiKey and apiKeyValidating when this component is mounted
+  useEffect(() => {
+    const initializeApiKey = async () => {
+      const apiKey = await Storage.getApiKey();
+      const isApiKeyValidating: boolean =
+        await Storage.getApiKeyValidating()
+      setApiKeyValidating(isApiKeyValidating);
+      if(apiKey){      
+        setApiKey(apiKey);
+      }
+    }
+    initializeApiKey();
+  }, []);
+
+  // add listener for apiKey on component mount
+  useEffect(() => {
+    const listener = () => {
+      chrome.storage.sync.get(["apiKey"], (result) => {
+        setApiKey(result.apiKey);
+      })
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, []);
+
+  // add listener for apiKeyValidating on component mount
+  useEffect(() => {
+    const listener = () => {
+      chrome.storage.sync.get(["apiKeyValidating"], (result) => {
+        setApiKeyValidating(result.apiKeyValidating);
+      })
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, []);
+
+  // set current step of helper text
+  useEffect(() => {
+    if (apiKeyValidating) {
+      setCurrent(0);
+    } else {
+      if (apiKey !== "") {
+        if (props.isTextSelected) {
+          setCurrent(2);
+        } else {
+          setCurrent(1);
+        }
+      } else {
+        setCurrent(0);
+      }
+    }
+  }, [apiKeyValidating, apiKey, props.isTextSelected]);
+
   return (
     <>
       <div
@@ -17,7 +82,7 @@ export const NoSummariesInfo: any = (props: any) => {
           <Paragraph strong>Generate your first Summary!</Paragraph>
           <Steps
             direction="vertical"
-            current={0}
+            current={current}
             items={[
               {
                 title: (
@@ -34,6 +99,7 @@ export const NoSummariesInfo: any = (props: any) => {
                     ⚙️
                   </Text>
                 ),
+                icon: apiKeyValidating ? <LoadingOutlined /> : null,
               },
               {
                 title: <Text> Highlight Text on any Website ✍️ </Text>,
