@@ -1,7 +1,7 @@
 // Store and retrieve data from chrome storage
 export default class Storage {
   // Retrieves the API key from chrome storage
-  static async getApiKey() {
+  static async getApiKey(): Promise<string | undefined> {
     try {
       let result = await chrome.storage.local.get("apiKey");
       let apiKey: string = result.apiKey;
@@ -11,13 +11,16 @@ export default class Storage {
     }
   }
 
-  // Set the API key to chrome storage
-  static async setApiKey(apiKey: string) {
+  // Gets api key validation status
+  static async getApiKeyValidating(): Promise<boolean> {
     try {
-      await chrome.storage.local.set({ apiKey });
+      let result = await chrome.storage.local.get("isApiKeyValidating");
+      let isApiKeyValidating: boolean = result.isApiKeyValidating;
+      return isApiKeyValidating;
     } catch (error) {
       console.error(error);
     }
+    return false
   }
 
   // Gets allSummaries from chrome storage
