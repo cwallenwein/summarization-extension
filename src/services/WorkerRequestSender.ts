@@ -1,7 +1,7 @@
 export default class WorkerRequestSender {
   // Sends a message to the worker script to summarize the currently highlighted text
   static async requestSummary() {
-    try{
+    try {
       let activeTab = await this.getActiveTab();
       if (activeTab && activeTab.id) {
         let tabId: number = activeTab.id;
@@ -16,28 +16,26 @@ export default class WorkerRequestSender {
       } else {
         console.error("No active tab");
       }
-    }catch(error){
-      console.error(error)
+    } catch (error) {
+      console.error(error);
     }
-    
   }
 
   static async requestApiKeyValidation(apiKey: string) {
-    try{
+    try {
       const message: IApiKeyValidationRequest = {
         type: "api_key_validation_request",
         apiKey: apiKey,
       };
       const apiKeyValid: any = await this.sendMessageToWorker(message);
       return apiKeyValid;
-    }catch(error){
-      console.error(error)
+    } catch (error) {
+      console.error(error);
     }
-    
   }
 
   static async requestSelectionState() {
-    try{
+    try {
       const activeTab: chrome.tabs.Tab | undefined = await this.getActiveTab();
       if (activeTab && activeTab.id) {
         const tabId: number = activeTab.id;
@@ -48,8 +46,8 @@ export default class WorkerRequestSender {
         const isTextSelected: any = await this.sendMessageToWorker(message);
         return isTextSelected;
       }
-    }catch(error){
-      console.error(error)
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -65,8 +63,8 @@ export default class WorkerRequestSender {
       tabId: tabId,
       tabTitle: tabTitle,
     };
-
-    return await this.sendMessageToWorker(message);
+    const response = await this.sendMessageToWorker(message);
+    return response;
   }
 
   private static async sendMessageToWorker(
@@ -79,6 +77,7 @@ export default class WorkerRequestSender {
       const response = await chrome.runtime.sendMessage(message);
       if (response.type === "error") {
         console.error(response.error);
+        return response;
       } else {
         return response;
       }
