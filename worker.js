@@ -7,6 +7,8 @@ async function initializeExtension() {
     await chrome.storage.local.set({
       allSummaries: [],
       apiKey: undefined,
+      isApiKeyValidating: false,
+      isUserCurrentlyHighlighting: false,
     });
   } catch (error) {
     console.error(error);
@@ -26,6 +28,9 @@ function handleMessage(message, _, sendResponse) {
     } else if (message.type === "api_key_validation_request") {
       handleApiKeyValidationRequest(message, sendResponse);
       return true;
+    } else if (message.type === "get_selection_state_request") {
+      handleGetSelectionStateRequest(message, sendResponse);
+      return true;
     } else {
       sendResponse({ type: "error", message: "Unknown message type" });
     }
@@ -35,25 +40,55 @@ function handleMessage(message, _, sendResponse) {
   }
 }
 
-// Checks
-async function handleApiKeyValidationRequest(message, sendResponse) {
-  // check internet connection
-  const connectedToInternet = isConnectedToInternet(sendResponse);
-  if (!connectedToInternet) return;
-
-  // check if api key is valid
+// TODO: Is is no problem if user is selecting text in browser internal pages here. Don't throw an error. How to handle this?
+// Returns if the user is currently highlighting text
+async function handleGetSelectionStateRequest(message, sendResponse) {
+  const tabId = message.tabId;
   try {
-    const apiKey = message.apiKey;
-    const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
-    console.log("API Key Valid: " + apiKeyValid);
-    if (apiKeyValid) {
-      return sendResponse({ type: "success" });
+    const selectedText = await getSelectedText(tabId);
+    if (selectedText) {
+      sendResponse({ type: "success", isTextSelected: true });
     } else {
-      return sendResponse({ type: "error", message: "Invalid API Key" });
+      sendResponse({
+        type: "success",
+        isTextSelected: false,
+      });
     }
   } catch (error) {
     console.error(error);
-    return sendResponse({ type: "error", message: error.message });
+    sendResponse({
+      type: "error",
+      isTextSelected: false,
+      message: error.message,
+    });
+  }
+}
+
+async function handleApiKeyValidationRequest(message, sendResponse) {
+  // check internet connection
+  if (!navigator.onLine) {
+    sendResponse({ type: "error", message: "Not connected to the internet" });
+    return false;
+  }
+
+  // check if api key is valid
+  try {
+    ApiKey.setApiKeyValidating(true);
+
+    const apiKey = message.apiKey;
+    const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
+
+    if (apiKeyValid) {
+      await ApiKey.setApiKey(apiKey);
+      sendResponse({ type: "success" });
+    } else {
+      sendResponse({ type: "error", message: "Invalid API Key" });
+    }
+  } catch (error) {
+    console.error(error);
+    sendResponse({ type: "error", message: error.message });
+  } finally {
+    ApiKey.setApiKeyValidating(false);
   }
 }
 
@@ -69,6 +104,7 @@ async function handleSummarizationRequest(message, sendResponse) {
     let text = await getSelectedText(tabId);
     if (text) {
       summarizeText({ text, url, tabTitle, sendResponse });
+      sendResponse({ type: "success" });
     } else {
       sendResponse({ type: "error", message: "No text selected" });
     }
@@ -149,15 +185,18 @@ class Cohere {
     }
   }
 
-  static async sendRequest(text) {
+  static async sendRequest(text, apiKey) {
     const url = "https://api.cohere.ai/generate";
-    const options = await this.generateOptions(text);
+    const options = await this.generateOptions(text, apiKey);
     let response = await fetch(url, options);
     return response;
   }
 
-  static async generateOptions(text) {
-    const apiKey = "Bearer " + (await ApiKey.get());
+  static async generateOptions(text, apiKey) {
+    if (!apiKey) {
+      apiKey = await ApiKey.getApiKey();
+    }
+    apiKey = "Bearer " + apiKey;
     const prompt = this.generatePrompt(text);
     const body = JSON.stringify({
       model: "xlarge",
@@ -228,11 +267,29 @@ function isConnectedToInternet(sendResponse) {
 // Gets the API key from chrome storage
 class ApiKey {
   // Retrieves the API key from chrome storage
-  static async get() {
+  static async getApiKey() {
     try {
       let result = await chrome.storage.local.get("apiKey");
       let apiKey = result.apiKey;
       return apiKey;
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // Sets the API key in chrome storage
+  static async setApiKey(apiKey) {
+    try {
+      await chrome.storage.local.set({ apiKey });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  // Sets api key validation status in chrome storage
+  static async setApiKeyValidating(isValidating) {
+    try {
+      await chrome.storage.local.set({ isApiKeyValidating: isValidating });
     } catch (error) {
       console.error(error);
     }
