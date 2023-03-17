@@ -1,3 +1,5 @@
+import Storage from "../services/Storage";
+
 chrome.runtime.onInstalled.addListener(initializeExtension);
 chrome.runtime.onMessage.addListener(handleMessage);
 
@@ -7,6 +9,8 @@ async function initializeExtension() {
     await chrome.storage.local.set({
       allSummaries: [],
       apiKey: undefined,
+      isApiKeyValidating: false,
+      isUserCurrentlyHighlighting: false,
     });
   } catch (error) {
     console.error(error);
@@ -18,7 +22,8 @@ async function initializeExtension() {
 //              call the text of the summary summaryText
 
 // Handles incoming messages and calls the appropriate function based on message type
-function handleMessage(message, _, sendResponse) {
+function handleMessage(message: any, _: any, sendResponse: any) {
+  console.log("Message received in worker script: " + message.type);
   try {
     if (message.type === "summarization_request") {
       handleSummarizationRequest(message, sendResponse);
@@ -26,38 +31,71 @@ function handleMessage(message, _, sendResponse) {
     } else if (message.type === "api_key_validation_request") {
       handleApiKeyValidationRequest(message, sendResponse);
       return true;
+    } else if (message.type === "get_selection_state_request") {
+      handleGetSelectionStateRequest(message, sendResponse);
+      return true;
     } else {
       sendResponse({ type: "error", message: "Unknown message type" });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     sendResponse({ type: "error", message: error.message });
   }
 }
 
-// Checks
-async function handleApiKeyValidationRequest(message, sendResponse) {
-  // check internet connection
-  const connectedToInternet = isConnectedToInternet(sendResponse);
-  if (!connectedToInternet) return;
-
-  // check if api key is valid
+// TODO: Is is no problem if user is selecting text in browser internal pages here. Don't throw an error. How to handle this?
+// Returns if the user is currently highlighting text
+async function handleGetSelectionStateRequest(message: any, sendResponse: any) {
+  const tabId = message.tabId;
   try {
-    const apiKey = message.apiKey;
-    const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
-    console.log("API Key Valid: " + apiKeyValid);
-    if (apiKeyValid) {
-      return sendResponse({ type: "success" });
+    const selectedText = await getSelectedText(tabId);
+    if (selectedText) {
+      sendResponse({ type: "success", isTextSelected: true });
     } else {
-      return sendResponse({ type: "error", message: "Invalid API Key" });
+      sendResponse({
+        type: "success",
+        isTextSelected: false,
+      });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return sendResponse({ type: "error", message: error.message });
+    sendResponse({
+      type: "error",
+      isTextSelected: false,
+      message: error.message,
+    });
   }
 }
 
-async function handleSummarizationRequest(message, sendResponse) {
+async function handleApiKeyValidationRequest(message: any, sendResponse: any) {
+  // check internet connection
+  if (!navigator.onLine) {
+    sendResponse({ type: "error", message: "Not connected to the internet" });
+    return false;
+  }
+
+  // check if api key is valid
+  try {
+    Storage.setApiKeyValidating(true);
+
+    const apiKey = message.apiKey;
+    const apiKeyValid = await Cohere.isApiKeyValid(apiKey);
+
+    if (apiKeyValid) {
+      await Storage.setApiKey(apiKey);
+      sendResponse({ type: "success" });
+    } else {
+      sendResponse({ type: "error", message: "Invalid API Key" });
+    }
+  } catch (error: any) {
+    console.error(error);
+    sendResponse({ type: "error", message: error.message });
+  } finally {
+    Storage.setApiKeyValidating(false);
+  }
+}
+
+async function handleSummarizationRequest(message: any, sendResponse: any) {
   let url = message.url;
   let tabId = message.tabId;
   let tabTitle = message.tabTitle;
@@ -69,19 +107,20 @@ async function handleSummarizationRequest(message, sendResponse) {
     let text = await getSelectedText(tabId);
     if (text) {
       summarizeText({ text, url, tabTitle, sendResponse });
+      sendResponse({ type: "success" });
     } else {
       sendResponse({ type: "error", message: "No text selected" });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     sendResponse({ type: "error", message: error.message });
   }
 }
 
-async function summarizeText({ text, url, tabTitle, sendResponse }) {
+async function summarizeText({ text, url, tabTitle, sendResponse }: any) {
   const timestamp = new Date().getTime();
   try {
-    await Storage.createLoadingSummary({
+    await ChromeStorage.createLoadingSummary({
       timestamp,
       url,
       tabTitle,
@@ -89,12 +128,12 @@ async function summarizeText({ text, url, tabTitle, sendResponse }) {
     });
 
     let summary = await Cohere.summarize(text);
-    await Storage.updateLoadingSummary({
+    await ChromeStorage.updateLoadingSummary({
       timestamp: timestamp,
       summary: summary,
     });
     sendResponse({ type: "success" });
-  } catch (error) {
+  } catch (error: any) {
     await Storage.deleteSummaryByTimestamp(timestamp);
     sendResponse({ type: "error", message: error.message });
     console.error(error);
@@ -103,9 +142,9 @@ async function summarizeText({ text, url, tabTitle, sendResponse }) {
 
 class Cohere {
   // TODO: if the stop sequence was used in the prompt, filter it out
-  static async summarize(text) {
+  static async summarize(text: any) {
     console.log("Text to summarize: " + text);
-    const response = await this.sendRequest(text);
+    const response = await Cohere.sendRequest(text);
     if (response?.ok) {
       return await this.handleSuccessfulRequest(response);
     } else {
@@ -113,7 +152,7 @@ class Cohere {
     }
   }
 
-  static async handleSuccessfulRequest(response) {
+  static async handleSuccessfulRequest(response: any) {
     let result = await response.json();
     if (result["text"]) {
       let summary = result["text"];
@@ -125,7 +164,7 @@ class Cohere {
       console.error("Cohere API didn't return a summary");
     }
   }
-  static async handleFailedRequest(response) {
+  static async handleFailedRequest(response: any) {
     const status = response?.status;
     // TODO: not all 4xx errors are invalid api keys
     if (status >= 400 && status < 500) {
@@ -135,7 +174,7 @@ class Cohere {
     }
   }
 
-  static async isApiKeyValid(apiKey) {
+  static async isApiKeyValid(apiKey: string) {
     const response = await this.sendRequest("", apiKey);
     if (response?.ok) {
       return true;
@@ -149,15 +188,18 @@ class Cohere {
     }
   }
 
-  static async sendRequest(text) {
+  static async sendRequest(text: string, apiKey?: string) {
     const url = "https://api.cohere.ai/generate";
-    const options = await this.generateOptions(text);
+    const options = await this.generateOptions(text, apiKey);
     let response = await fetch(url, options);
     return response;
   }
 
-  static async generateOptions(text) {
-    const apiKey = "Bearer " + (await ApiKey.get());
+  static async generateOptions(text: any, apiKey?: string) {
+    if (!apiKey) {
+      apiKey = await Storage.getApiKey();
+    }
+    apiKey = "Bearer " + apiKey;
     const prompt = this.generatePrompt(text);
     const body = JSON.stringify({
       model: "xlarge",
@@ -178,7 +220,7 @@ class Cohere {
     return options;
   }
 
-  static generatePrompt(selectedText) {
+  static generatePrompt(selectedText: string) {
     const intro = "This program summarizes articles from the internet.\n\n";
     const example1 =
       "Passage: Is Wordle getting tougher to solve? Players seem to be convinced that the game has gotten harder in recent weeks ever since The New York Times bought it from developer Josh Wardle in late January. The Times has come forward and shared that this likely isn't the case. That said, the NYT did mess with the back end code a bit, removing some offensive and sexual language, as well as some obscure words There is a viral thread claiming that a confirmation bias was at play. One Twitter user went so far as to claim the game has gone to 'the dusty section of the dictionary' to find its latest words.\n\nTLDR: Wordle has not gotten more difficult to solve.\n--\n";
@@ -191,11 +233,13 @@ class Cohere {
 }
 
 // Retrieves the selected text on the current tab
-async function getSelectedText(tabId) {
+async function getSelectedText(tabId: number) {
   try {
     let injectionResults = await chrome.scripting.executeScript({
       target: { tabId: tabId },
-      func: () => window.getSelection().toString(),
+      func: () => {
+        return window.getSelection()!.toString();
+      },
     });
     if (injectionResults && injectionResults.length >= 1) {
       let selection = injectionResults[0].result;
@@ -203,7 +247,7 @@ async function getSelectedText(tabId) {
     } else {
       throw new Error("Unknown error");
     }
-  } catch (error) {
+  } catch (error: any) {
     if (
       error.message.includes("chrome:// URL") ||
       error.message.includes("edge:// URL")
@@ -216,7 +260,7 @@ async function getSelectedText(tabId) {
   }
 }
 
-function isConnectedToInternet(sendResponse) {
+function isConnectedToInternet(sendResponse: any) {
   if (!navigator.onLine) {
     sendResponse({ type: "error", message: "Not connected to the internet" });
     return false;
@@ -225,22 +269,8 @@ function isConnectedToInternet(sendResponse) {
   }
 }
 
-// Gets the API key from chrome storage
-class ApiKey {
-  // Retrieves the API key from chrome storage
-  static async get() {
-    try {
-      let result = await chrome.storage.local.get("apiKey");
-      let apiKey = result.apiKey;
-      return apiKey;
-    } catch (error) {
-      console.error(error);
-    }
-  }
-}
-
 // Saves, gets and deletes summaries from chrome storage
-class Storage {
+class ChromeStorage {
   // Gets allSummaries from chrome storage
   static async getAllSummaries() {
     try {
@@ -252,7 +282,7 @@ class Storage {
   }
 
   // Set the allSummaries in chrome storage
-  static async setAllSummaries(allSummaries) {
+  static async setAllSummaries(allSummaries: any) {
     try {
       await chrome.storage.local.set({ allSummaries });
     } catch (error) {
@@ -261,11 +291,13 @@ class Storage {
   }
 
   // Deletes a summary with a specific timestamp from chrome storage
-  static async deleteSummaryByTimestamp(timestamp) {
+  static async deleteSummaryByTimestamp(timestamp: number) {
     try {
       let allSummaries = await this.getAllSummaries();
       if (allSummaries) {
-        allSummaries = allSummaries.filter((s) => s.timestamp !== timestamp);
+        allSummaries = allSummaries.filter(
+          (s: any) => s.timestamp !== timestamp
+        );
         await this.setAllSummaries(allSummaries);
       }
     } catch (error) {
@@ -274,7 +306,7 @@ class Storage {
   }
 
   // Saves a summary to chrome storage
-  static async saveSummary(summary) {
+  static async saveSummary(summary: any) {
     try {
       let allSummaries = await this.getAllSummaries();
       if (allSummaries) {
@@ -289,7 +321,7 @@ class Storage {
   }
 
   // Saves the summary to chrome storage
-  static async createLoadingSummary({ timestamp, url, tabTitle, text }) {
+  static async createLoadingSummary({ timestamp, url, tabTitle, text }: any) {
     const loadingSummary = {
       timestamp: timestamp,
       url: url,
@@ -303,9 +335,9 @@ class Storage {
   }
 
   // Updates the summary in chrome storage
-  static async updateLoadingSummary({ timestamp, summary }) {
+  static async updateLoadingSummary({ timestamp, summary }: any) {
     let allSummaries = await this.getAllSummaries();
-    let index = allSummaries.findIndex((item) => {
+    let index = allSummaries.findIndex((item: any) => {
       return item.timestamp === timestamp;
     });
     if (index === -1) {

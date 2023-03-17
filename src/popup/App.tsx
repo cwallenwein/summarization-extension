@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { FC } from "react";
 import { Card, message } from "antd";
-import Storage, { ISummary } from "./services/Storage";
+import Storage, { ISummary } from "../services/Storage";
 import { Help } from "./components/Help";
 import { Settings } from "./components/Settings";
 import { SummaryCard } from "./components/SummaryCard";
@@ -37,8 +37,8 @@ const App: React.FC = () => {
         id="main"
         title={<Title activeTab={activeTab} setActiveTab={setActiveTab} />}
         extra={[
-          <GoToSettingsButton setActiveTab={setActiveTab} />,
-          <GoToHelpButton setActiveTab={setActiveTab} />,
+          <GoToSettingsButton key="settings" setActiveTab={setActiveTab} />,
+          <GoToHelpButton key="help" setActiveTab={setActiveTab} />,
         ]}
         style={{ textAlign: "left" }}
       >
@@ -75,7 +75,7 @@ const Summaries: any = (props: any) => {
   });
 
   const AllSummaries = allSummaries.reverse().map((item: any, index) => {
-    return <SummaryCard summary={item} messageApi={messageApi} />;
+    return <SummaryCard key={index} summary={item} messageApi={messageApi} />;
   });
 
   if (allSummaries.length === 0) {

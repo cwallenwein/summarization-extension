@@ -1,7 +1,9 @@
 import React, { FC, useState, useEffect } from "react";
 import { Button, Form, Input, Typography, message } from "antd";
 import { ApiOutlined } from "@ant-design/icons";
-import Storage, { ISummary } from "../services/Storage";
+import Storage, { ISummary } from "../../services/Storage";
+import WorkerRequestSender from "../../services/WorkerRequestSender";
+
 import { Padding } from "./Style";
 const { Paragraph } = Typography;
 
@@ -9,34 +11,14 @@ export const Settings: any = (props: any) => {
   const [apiKey, setApiKey] = useState<string>("");
   const [messageApi, contextHolder] = message.useMessage();
 
-  //const [formValidationStatus, steFormValidationStatus] = useState<string>("")
-
-  // Update displayed API key when it was changed in local storage
-  useEffect(() => {
-    const updateApiKey = async () => {
-      const result = await Storage.getApiKey();
-
-      if (result === undefined) {
-        console.error("No API key specified yet");
-        return;
-      } else {
-        setApiKey(result);
-      }
-    };
-
-    updateApiKey().catch(console.error);
-  });
-
   // TODO: add preloader
   // When the user changes the API key, save it to local storage
   const onFinish = async (values: any) => {
     const newApiKey = values.apiKey;
     await setApiKey(newApiKey);
-    await Storage.setApiKey(newApiKey);
-    const apiKeyValid: any = await chrome.runtime.sendMessage({
-      type: "api_key_validation_request",
-      apiKey: newApiKey,
-    });
+    const apiKeyValid: any = await WorkerRequestSender.requestApiKeyValidation(
+      newApiKey
+    );
     if (apiKeyValid.type === "success") {
       messageApi.success({ content: "Successfully updated the API Key" });
     } else {
@@ -44,7 +26,6 @@ export const Settings: any = (props: any) => {
     }
   };
 
-  //<Paragraph>Current API Key: {apiKey}</Paragraph>;
   return (
     <>
       {contextHolder}
