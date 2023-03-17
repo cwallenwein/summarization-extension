@@ -120,7 +120,7 @@ async function handleSummarizationRequest(message: any, sendResponse: any) {
 async function summarizeText({ text, url, tabTitle, sendResponse }: any) {
   const timestamp = new Date().getTime();
   try {
-    await ChromeStorage.createLoadingSummary({
+    await Storage.createLoadingSummary({
       timestamp,
       url,
       tabTitle,
@@ -128,7 +128,7 @@ async function summarizeText({ text, url, tabTitle, sendResponse }: any) {
     });
 
     let summary = await Cohere.summarize(text);
-    await ChromeStorage.updateLoadingSummary({
+    await Storage.updateLoadingSummary({
       timestamp: timestamp,
       summary: summary,
     });
@@ -266,85 +266,5 @@ function isConnectedToInternet(sendResponse: any) {
     return false;
   } else {
     return true;
-  }
-}
-
-// Saves, gets and deletes summaries from chrome storage
-class ChromeStorage {
-  // Gets allSummaries from chrome storage
-  static async getAllSummaries() {
-    try {
-      let result = await chrome.storage.local.get("allSummaries");
-      return result.allSummaries;
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Set the allSummaries in chrome storage
-  static async setAllSummaries(allSummaries: any) {
-    try {
-      await chrome.storage.local.set({ allSummaries });
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Deletes a summary with a specific timestamp from chrome storage
-  static async deleteSummaryByTimestamp(timestamp: number) {
-    try {
-      let allSummaries = await this.getAllSummaries();
-      if (allSummaries) {
-        allSummaries = allSummaries.filter(
-          (s: any) => s.timestamp !== timestamp
-        );
-        await this.setAllSummaries(allSummaries);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Saves a summary to chrome storage
-  static async saveSummary(summary: any) {
-    try {
-      let allSummaries = await this.getAllSummaries();
-      if (allSummaries) {
-        allSummaries.push(summary);
-      } else {
-        throw new Error("No summary returned");
-      }
-      await this.setAllSummaries(allSummaries);
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // Saves the summary to chrome storage
-  static async createLoadingSummary({ timestamp, url, tabTitle, text }: any) {
-    const loadingSummary = {
-      timestamp: timestamp,
-      url: url,
-      tabTitle: tabTitle,
-      text: text,
-      summary: "",
-      loading: true,
-    };
-    await this.saveSummary(loadingSummary);
-    return timestamp;
-  }
-
-  // Updates the summary in chrome storage
-  static async updateLoadingSummary({ timestamp, summary }: any) {
-    let allSummaries = await this.getAllSummaries();
-    let index = allSummaries.findIndex((item: any) => {
-      return item.timestamp === timestamp;
-    });
-    if (index === -1) {
-      throw new Error("No summary found with the specified timestamp");
-    }
-    allSummaries[index].summary = summary;
-    allSummaries[index].loading = false;
-    await this.setAllSummaries(allSummaries);
   }
 }
