@@ -11,6 +11,15 @@ export default class Storage {
     }
   }
 
+  // Set the API key to chrome storage
+  static async setApiKey(apiKey: string) {
+    try {
+      await chrome.storage.local.set({ apiKey });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   // Gets api key validation status
   static async getApiKeyValidating(): Promise<boolean> {
     try {
@@ -20,7 +29,7 @@ export default class Storage {
     } catch (error) {
       console.error(error);
     }
-    return false
+    return false;
   }
 
   // Sets api key validation status in chrome storage
