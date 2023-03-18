@@ -1,8 +1,8 @@
 import React, { FC, useState, useEffect } from "react";
 import { Button, Form, Input, Typography, message } from "antd";
 import { ApiOutlined } from "@ant-design/icons";
-import Storage, { ISummary } from "../services/Storage";
-import WorkerRequestSender from "../services/WorkerRequestSender";
+import Storage, { ISummary } from "../../services/Storage";
+import WorkerRequestSender from "../../services/WorkerRequestSender";
 
 import { Padding } from "./Style";
 const { Paragraph } = Typography;

@@ -1,7 +1,7 @@
 import { FC, useEffect, useState } from "react";
 import { Typography, Steps, Space } from "antd";
-import Storage from "../services/Storage";
-import WorkerRequestSender from "../services/WorkerRequestSender";
+import Storage from "../../services/Storage";
+import WorkerRequestSender from "../../services/WorkerRequestSender";
 import { LoadingOutlined } from "@ant-design/icons";
 
 const { Paragraph, Link, Text } = Typography;

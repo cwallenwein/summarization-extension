@@ -17,6 +17,7 @@ export default class WorkerRequestSender {
         console.error("No active tab");
       }
     } catch (error) {
+      console.log("Error in requestSummary");
       console.error(error);
     }
   }
@@ -30,6 +31,7 @@ export default class WorkerRequestSender {
       const apiKeyValid: any = await this.sendMessageToWorker(message);
       return apiKeyValid;
     } catch (error) {
+      console.log("Error in requestApiKeyValidation");
       console.error(error);
     }
   }
@@ -47,6 +49,7 @@ export default class WorkerRequestSender {
         return isTextSelected;
       }
     } catch (error) {
+      console.log("Error in requestSelectionState");
       console.error(error);
     }
   }

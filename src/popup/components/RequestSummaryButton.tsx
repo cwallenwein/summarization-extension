@@ -1,6 +1,6 @@
 import React, { FC, useState } from "react";
 import { Button, Tooltip, message } from "antd";
-import WorkerRequestSender from "../services/WorkerRequestSender";
+import WorkerRequestSender from "../../services/WorkerRequestSender";
 
 export const RequestSummaryButton: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);

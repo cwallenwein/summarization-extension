@@ -1,7 +1,7 @@
 import React, { FC, useState } from "react";
 import { Card, Typography, Skeleton, Tooltip, message } from "antd";
 import { CopyOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
-import Storage, { ISummary } from "../services/Storage";
+import Storage, { ISummary } from "../../services/Storage";
 const { Paragraph, Link, Text } = Typography;
 
 export function SummaryCard(props: any) {
@@ -35,6 +35,7 @@ export function SummaryCard(props: any) {
 
   // TODO: skeleton only for summary text and not for the rest of the card
   // TODO: add button to regenerate summary
+  // TODO: don't allow user to delte or copy summary if it's loading
   return (
     <Card
       style={{
